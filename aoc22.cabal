@@ -1,0 +1,11 @@
+cabal-version:      2.4
+name:               aoc22
+version:            0.1.0.0
+author:             Michalis Pardalos
+maintainer:         m.pardalos@gmail.com
+
+executable aoc22
+    main-is:          Main.hs
+    build-depends:    base, safe
+    hs-source-dirs:   app
+    default-language: Haskell2010
