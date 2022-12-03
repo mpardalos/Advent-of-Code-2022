@@ -1,12 +1,16 @@
 {-# OPTIONS -fdefer-typed-holes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE MultiWayIf #-}
 module Main where
 import           Data.Foldable (foldl')
-import           Data.List     (sort)
+import           Data.List     (sort, intersect, nub)
 import           Safe
 import           Text.Printf   (printf)
 import           Text.Read     (readMaybe)
+import           Data.Char     (ord)
+import           Data.List.Split
+import           Debug.Trace
 
 --- Day 1 ----------------------------------------------------------------------
 
@@ -94,6 +98,33 @@ pointsFromLine_part2 [opponentChar, ' ', resultChar] = pointsFromGame opponentMo
 day2_part2 :: String -> Int
 day2_part2 = sum . map pointsFromLine_part2 . lines
 
+--- Day 3 ----------------------------------------------------------------------
+
+split2 :: String -> (String, String)
+split2 s = splitAt (length s `div` 2) s
+
+priority :: Char -> Int
+priority c = if
+  | 'a' <= c && c <= 'z' -> ord c - ord 'a' + 1
+  | 'A' <= c && c <= 'Z' -> ord c - ord 'A' + 27
+
+day3_part1 :: String -> Int
+day3_part1 = sum
+  . concatMap (map priority)
+  . map nub
+  . map (uncurry intersect)
+  . map split2
+  . lines
+
+day3_part2 :: String -> Int
+day3_part2 = sum
+  . map priority
+  . map (\[badge] -> badge)
+  . map nub
+  . map (\[a, b, c] -> intersect a (intersect b c))
+  . chunksOf 3
+  . lines
+
 --- Infrastructure -------------------------------------------------------------
 
 run :: Show a => String -> (String -> a) -> String -> IO ()
@@ -109,3 +140,6 @@ main = do
 
   run "Day 2 part 1" day2_part1 "day2"
   run "Day 2 part 2" day2_part2 "day2"
+
+  run "Day 3 part 1" day3_part1 "day3"
+  run "Day 3 part 2" day3_part2 "day3"
