@@ -125,6 +125,30 @@ day3_part2 = sum
   . chunksOf 3
   . lines
 
+--- Day 4 ----------------------------------------------------------------------
+
+readSectionAssignment :: String -> ((Int, Int), (Int, Int))
+readSectionAssignment (splitOn "," ->
+                       [ splitOn "-" -> [a,b]
+                       , splitOn "-" -> [c,d]
+                       ]) = ((read a, read b), (read c, read d))
+
+day4_part1 :: String -> Int
+day4_part1 = length
+  . filter (\((a, b), (c, d)) -> (a <= c && d <= b) || (c <= a && b <= d))
+  . map readSectionAssignment
+  . lines
+
+day4_part2 :: String -> Int
+day4_part2 = length
+  . filter (\((a, b), (c, d)) -> not
+             $ (a < c && b < c)
+             || (a > d && b > d)
+             || (c < a && d < a)
+             || (c > b && d > b))
+  . map readSectionAssignment
+  . lines
+
 --- Infrastructure -------------------------------------------------------------
 
 run :: Show a => String -> (String -> a) -> String -> IO ()
@@ -143,3 +167,6 @@ main = do
 
   run "Day 3 part 1" day3_part1 "day3"
   run "Day 3 part 2" day3_part2 "day3"
+
+  run "Day 4 part 1" day4_part1 "day4"
+  run "Day 4 part 2" day4_part2 "day4"
