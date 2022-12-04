@@ -17,5 +17,5 @@ main = do
     return (Map.fromList list)
 
   defaultMain
-    $ map (\(MkSolution name solution inputName) -> bench "" $ whnf solution (inputs ! inputName))
+    $ map (\(MkSolution name solution inputName) -> bench name $ whnf solution (inputs ! inputName))
     $ solutions
