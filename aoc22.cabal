@@ -4,8 +4,13 @@ version:            0.1.0.0
 author:             Michalis Pardalos
 maintainer:         m.pardalos@gmail.com
 
-executable aoc22
-    main-is:          Main.hs
-    build-depends:    base, safe, containers, split
-    hs-source-dirs:   app
+library
     default-language: Haskell2010
+    build-depends:    base, safe, containers, split
+    hs-source-dirs:   solutions
+    exposed-modules:  Solutions
+
+executable aoc22
+    default-language: Haskell2010
+    build-depends:    base, aoc22
+    main-is:          Main.hs

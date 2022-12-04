@@ -2,15 +2,17 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE MultiWayIf #-}
-module Main where
+{-# LANGUAGE GADTs #-}
+module Solutions(Solution(..),solutions) where
 import           Data.Foldable (foldl')
 import           Data.List     (sort, intersect, nub)
 import           Safe
-import           Text.Printf   (printf)
 import           Text.Read     (readMaybe)
 import           Data.Char     (ord)
 import           Data.List.Split
 import           Debug.Trace
+import           System.Environment
+import           Control.Monad
 
 --- Day 1 ----------------------------------------------------------------------
 
@@ -151,22 +153,17 @@ day4_part2 = length
 
 --- Infrastructure -------------------------------------------------------------
 
-run :: Show a => String -> (String -> a) -> String -> IO ()
-run name solution file = do
-  input <- readFile ("data/" <> file)
-  printf "%s: %s\n" name (show $ solution input)
+data Solution where
+  MkSolution :: Show a => String -> (String -> a) -> String -> Solution
 
-main :: IO ()
-main = do
-  run "Day 1 test" day1_part1 "day1_test"
-  run "Day 1 part 1" day1_part1 "day1"
-  run "Day 1 part 2" day1_part2 "day1"
-
-  run "Day 2 part 1" day2_part1 "day2"
-  run "Day 2 part 2" day2_part2 "day2"
-
-  run "Day 3 part 1" day3_part1 "day3"
-  run "Day 3 part 2" day3_part2 "day3"
-
-  run "Day 4 part 1" day4_part1 "day4"
-  run "Day 4 part 2" day4_part2 "day4"
+solutions :: [Solution]
+solutions =
+  [ MkSolution "Day 1 part 1" day1_part1 "day1"
+  , MkSolution "Day 1 part 2" day1_part2 "day1"
+  , MkSolution "Day 2 part 1" day2_part1 "day2"
+  , MkSolution "Day 2 part 2" day2_part2 "day2"
+  , MkSolution "Day 3 part 1" day3_part1 "day3"
+  , MkSolution "Day 3 part 2" day3_part2 "day3"
+  , MkSolution "Day 4 part 1" day4_part1 "day4"
+  , MkSolution "Day 4 part 2" day4_part2 "day4"
+  ]
