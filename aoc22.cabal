@@ -18,5 +18,5 @@ executable aoc22
 benchmark bench
     type:             exitcode-stdio-1.0
     default-language: Haskell2010
-    build-depends:    base, aoc22, criterion, containers, directory
+    build-depends:    base, aoc22, criterion
     main-is:          Benchmark.hs
