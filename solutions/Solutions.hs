@@ -13,6 +13,7 @@ import           Data.List.Split
 import           Debug.Trace
 import           System.Environment
 import           Control.Monad
+import           Control.DeepSeq
 
 --- Day 1 ----------------------------------------------------------------------
 
@@ -154,7 +155,7 @@ day4_part2 = length
 --- Infrastructure -------------------------------------------------------------
 
 data Solution where
-  MkSolution :: Show a => String -> (String -> a) -> String -> Solution
+  MkSolution :: (NFData a, Show a) => String -> (String -> a) -> String -> Solution
 
 solutions :: [Solution]
 solutions =
