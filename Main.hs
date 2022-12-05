@@ -12,9 +12,11 @@ titleLength = maximum [ length name
                       ]
 
 printTableAnchor :: Bool -> IO ()
-printTableAnchor top = do
-  putStr (if top then "┌" else "└")
-  putStrLn $ take (15 + titleLength) $ repeat '─'
+printTableAnchor top =
+  printf "%s─%s─%s───────────\n"
+    (if top then "┌" else "└")
+    (take titleLength $ repeat '─')
+    (if top then "┬" else "┴")
 
 printLine :: String -> String -> IO ()
 printLine = printf "│ %*s │ %s \n" titleLength
