@@ -23,5 +23,5 @@ executable aoc22
 benchmark bench
     import:           opts
     type:             exitcode-stdio-1.0
-    build-depends:    base, aoc22, criterion, bytestring
+    build-depends:    base, aoc22, criterion, bytestring, containers
     main-is:          Benchmark.hs
