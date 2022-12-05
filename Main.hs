@@ -3,6 +3,7 @@ module Main where
 import           Solutions ( solutions, Solution(..) )
 import           Text.Printf   ( printf )
 import           Control.Monad ( forM_ )
+import qualified Data.ByteString.Char8 as BS
 
 titleLength :: Int
 titleLength = maximum [ length name
@@ -23,6 +24,6 @@ main :: IO ()
 main = do
   printTableAnchor True
   forM_ solutions $ \(MkSolution name solution inputFile) -> do
-    input <- readFile ("data/" <> inputFile)
+    input <- BS.readFile ("data/" <> inputFile)
     printLine name (show $ solution input)
   printTableAnchor False

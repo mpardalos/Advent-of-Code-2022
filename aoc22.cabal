@@ -6,17 +6,17 @@ maintainer:         m.pardalos@gmail.com
 
 library
     default-language: Haskell2010
-    build-depends:    base, safe, containers, split, deepseq
+    build-depends:    base, safe, containers, split, deepseq, bytestring
     hs-source-dirs:   solutions
     exposed-modules:  Solutions
 
 executable aoc22
     default-language: Haskell2010
-    build-depends:    base, aoc22
+    build-depends:    base, aoc22, bytestring
     main-is:          Main.hs
 
 benchmark bench
     type:             exitcode-stdio-1.0
     default-language: Haskell2010
-    build-depends:    base, aoc22, criterion
+    build-depends:    base, aoc22, criterion, bytestring
     main-is:          Benchmark.hs
