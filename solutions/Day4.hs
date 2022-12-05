@@ -11,7 +11,7 @@ readSectionAssignment s =
       s4 = BS.drop 1 s3
       Just (c, s5) = BS.readInt s4
       s6 = BS.drop 1 s5
-      Just (d, s7) = BS.readInt s6
+      Just (d, _s7) = BS.readInt s6
    in ((a, b), (c, d))
 
 part1 :: ByteString -> Int
