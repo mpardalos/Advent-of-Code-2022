@@ -115,11 +115,14 @@ priority c
   | ord 'a' <= c && c <= ord 'z' = c - ord 'a' + 1
   | ord 'A' <= c && c <= ord 'Z' = c - ord 'A' + 27
 
+intsetFromBytestring :: ByteString -> IntSet
+intsetFromBytestring = BS.foldl' (\acc c -> IntSet.insert (ord c) acc) IntSet.empty
+
 day3_part1 :: ByteString -> Int
 day3_part1 = sum
   . map (IntSet.foldl' (\acc c -> acc + priority c) 0)
   . map (uncurry IntSet.intersection)
-  . map (\(a, b) -> (IntSet.fromList $ map ord $ BS.unpack a, IntSet.fromList $ map ord $ BS.unpack b))
+  . map (\(a, b) -> (intsetFromBytestring a, intsetFromBytestring b))
   . map split2
   . BS.lines
 
@@ -128,7 +131,7 @@ day3_part2 = sum
   . map priority
   . map IntSet.findMin
   . map (foldr1 IntSet.intersection)
-  . map (map (IntSet.fromList . map ord . BS.unpack))
+  . map (map intsetFromBytestring)
   . chunksOf 3
   . BS.lines
 
