@@ -5,6 +5,8 @@
 {-# LANGUAGE GADTs #-}
 module Solutions(Solution(..),solutions) where
 
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Foldable (foldl')
 import           Data.List     (sort, intersect, nub)
 import           Safe
@@ -116,20 +118,18 @@ priority c = if
 
 day3_part1 :: ByteString -> Int
 day3_part1 = sum
-  . concatMap (map priority)
-  . map nub
-  . map (uncurry intersect)
-  . map (\(a, b) -> (BS.unpack a, BS.unpack b))
+  . map (Set.foldl' (\acc c -> acc + priority c) 0)
+  . map (uncurry Set.intersection)
+  . map (\(a, b) -> (Set.fromList $ BS.unpack a, Set.fromList $ BS.unpack b))
   . map split2
   . BS.lines
 
 day3_part2 :: ByteString -> Int
 day3_part2 = sum
   . map priority
-  . map (\[badge] -> badge)
-  . map nub
-  . map (\[a, b, c] -> intersect a (intersect b c))
-  . map (map BS.unpack)
+  . map (Set.elemAt 0)
+  . map (foldr1 Set.intersection)
+  . map (map (Set.fromList . BS.unpack))
   . chunksOf 3
   . BS.lines
 
