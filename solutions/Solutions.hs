@@ -4,8 +4,8 @@
 {-# LANGUAGE GADTs #-}
 module Solutions(Solution(..),solutions) where
 
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.IntSet (IntSet)
+import qualified Data.IntSet as IntSet
 import           Data.Foldable (foldl')
 import           Data.List     (sort, intersect, nub)
 import           Safe
@@ -110,25 +110,25 @@ day2_part2 = sum . map pointsFromLine_part2 . BS.lines
 split2 :: ByteString -> (ByteString, ByteString)
 split2 s = BS.splitAt (BS.length s `div` 2) s
 
-priority :: Char -> Int
+priority :: Int -> Int
 priority c
-  | 'a' <= c && c <= 'z' = ord c - ord 'a' + 1
-  | 'A' <= c && c <= 'Z' = ord c - ord 'A' + 27
+  | ord 'a' <= c && c <= ord 'z' = c - ord 'a' + 1
+  | ord 'A' <= c && c <= ord 'Z' = c - ord 'A' + 27
 
 day3_part1 :: ByteString -> Int
 day3_part1 = sum
-  . map (Set.foldl' (\acc c -> acc + priority c) 0)
-  . map (uncurry Set.intersection)
-  . map (\(a, b) -> (Set.fromList $ BS.unpack a, Set.fromList $ BS.unpack b))
+  . map (IntSet.foldl' (\acc c -> acc + priority c) 0)
+  . map (uncurry IntSet.intersection)
+  . map (\(a, b) -> (IntSet.fromList $ map ord $ BS.unpack a, IntSet.fromList $ map ord $ BS.unpack b))
   . map split2
   . BS.lines
 
 day3_part2 :: ByteString -> Int
 day3_part2 = sum
   . map priority
-  . map (Set.elemAt 0)
-  . map (foldr1 Set.intersection)
-  . map (map (Set.fromList . BS.unpack))
+  . map IntSet.findMin
+  . map (foldr1 IntSet.intersection)
+  . map (map (IntSet.fromList . map ord . BS.unpack))
   . chunksOf 3
   . BS.lines
 
