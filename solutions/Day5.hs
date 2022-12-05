@@ -1,14 +1,18 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Day5 (part1, part2) where
 
+import Control.Monad.ST
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Foldable (foldl')
+import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Vector (Vector)
 import Data.Vector qualified as V
+import Data.Vector.Mutable qualified as MV
 
 type State = Vector ByteString
 
@@ -33,8 +37,8 @@ readState inputLines = (state, rest)
 
 data Move = Move
   { count :: Int,
-    from :: Int,
-    to :: Int
+    fromStack :: Int,
+    toStack :: Int
   }
   deriving (Show)
 
@@ -46,20 +50,26 @@ readMove line =
       Just (fromRead, s4) = BS.readInt s3
       s5 = BS.drop 4 s4
       Just (toRead, _) = BS.readInt s5
-   in Move {count, from = fromRead - 1, to = toRead - 1}
+   in Move {count, fromStack = fromRead - 1, toStack = toRead - 1}
 
 applyMove :: Bool -> State -> Move -> State
-applyMove shouldReverse state Move {..} =
-  let crates = BS.take count $ state V.! from
-   in V.imap
-        ( \i stk ->
-            if
-                | i == from -> BS.drop count stk
-                | i == to && shouldReverse -> BS.reverse crates <> stk
-                | i == to -> crates <> stk
-                | otherwise -> stk
+applyMove shouldReverse state Move {..} = V.modify mutation state
+  where
+    mutation :: forall s. MV.MVector s ByteString -> ST s ()
+    mutation mutState = do
+      cratesTakenRef <- newSTRef Nothing
+      MV.modifyM
+        mutState
+        ( \stack -> do
+            let (cratesTaken, cratesLeft) = BS.splitAt count stack
+            writeSTRef cratesTakenRef (Just cratesTaken)
+            return cratesLeft
         )
-        state
+        fromStack
+      Just cratesTaken <- readSTRef cratesTakenRef
+      if shouldReverse
+        then MV.modify mutState (BS.append (BS.reverse cratesTaken)) toStack
+        else MV.modify mutState (BS.append cratesTaken) toStack
 
 solve :: Bool -> ByteString -> String
 solve shouldReverse input =
