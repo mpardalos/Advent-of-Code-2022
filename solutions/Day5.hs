@@ -16,33 +16,20 @@ imapN :: Int -> (a -> a) -> Vector a -> Vector a
 imapN n f = V.imap (\i val -> if i == n then f val else val)
 
 readStateLine :: State -> ByteString -> State
-readStateLine = go 0
+readStateLine initialState line = foldl' addNumberedCrateToState initialState numberedCrates
   where
-    go :: Int -> State -> ByteString -> State
-    go stN st line
-      | BS.null line = st
-      | otherwise =
-          let Just (c, s1) = BS.uncons (BS.drop 1 line)
-              rest = BS.drop 2 s1
-           in go
-                (stN + 1)
-                ( if c /= ' '
-                    then imapN stN (`BS.snoc` c) st
-                    else st
-                )
-                rest
+    crateCharPositions = [1, 5 .. BS.length line - 2]
+    numberedCrates = zip [0 ..] (map (BS.index line) crateCharPositions)
 
-readState :: ByteString -> (State, ByteString)
-readState fullInput = go (V.replicate numColumns BS.empty) fullInput
+    addNumberedCrateToState state (_, ' ') = state
+    addNumberedCrateToState state (i, crate) = imapN i (`BS.snoc` crate) state
+
+readState :: [ByteString] -> (State, [ByteString])
+readState inputLines = (state, rest)
   where
-    numColumns = BS.length (BS.takeWhile (/= '\n') fullInput) `div` 4 + 1
-
-    go :: State -> ByteString -> (State, ByteString)
-    go state input
-      | input `BS.index` 1 == '1' = (state, input)
-      | otherwise =
-          let (line, rest) = BS.span (/= '\n') input
-           in go (readStateLine state line) (BS.drop 1 rest)
+    (stateLines, rest) = span (\l -> BS.index l 1 /= '1') inputLines
+    numColumns = BS.length (head inputLines) `div` 4 + 1
+    state = foldl' readStateLine (V.replicate numColumns BS.empty) stateLines
 
 data Move = Move
   { count :: Int,
@@ -76,9 +63,8 @@ applyMove shouldReverse state Move {..} =
 
 solve :: Bool -> ByteString -> String
 solve shouldReverse input =
-  let (state, rest) = readState input
-      moveLines = drop 2 (BS.lines rest)
-      moves = map readMove moveLines
+  let (state, restLines) = readState (BS.lines input)
+      moves = map readMove (drop 2 restLines)
       finalState = foldl' (applyMove shouldReverse) state moves
    in V.toList $ V.map BS.head finalState
 
