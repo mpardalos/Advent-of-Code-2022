@@ -1,10 +1,9 @@
 {-# OPTIONS_GHC -Wno-typed-holes #-}
 module Main where
 
-import           Solutions
-import           Text.Printf   (printf)
-import           Control.Monad (forM_)
-import           Data.Foldable
+import           Solutions ( solutions, Solution(..) )
+import           Text.Printf   ( printf )
+import           Control.Monad ( forM_ )
 
 titleLength :: Int
 titleLength = maximum [ length name
