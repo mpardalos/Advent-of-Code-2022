@@ -1,7 +1,6 @@
 {-# OPTIONS -fdefer-typed-holes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE GADTs #-}
 module Solutions(Solution(..),solutions) where
 
@@ -112,9 +111,9 @@ split2 :: ByteString -> (ByteString, ByteString)
 split2 s = BS.splitAt (BS.length s `div` 2) s
 
 priority :: Char -> Int
-priority c = if
-  | 'a' <= c && c <= 'z' -> ord c - ord 'a' + 1
-  | 'A' <= c && c <= 'Z' -> ord c - ord 'A' + 27
+priority c
+  | 'a' <= c && c <= 'z' = ord c - ord 'a' + 1
+  | 'A' <= c && c <= 'Z' = ord c - ord 'A' + 27
 
 day3_part1 :: ByteString -> Int
 day3_part1 = sum
