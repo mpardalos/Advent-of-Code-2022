@@ -1,20 +1,23 @@
 module Main where
 
-import           Solutions ( solutions, Solution(..) )
-import           Text.Printf   ( printf )
-import           Control.Monad ( forM_ )
-import qualified Data.ByteString.Char8 as BS
+import Control.Monad (forM_)
+import Data.ByteString.Char8 qualified as BS
+import Solutions (Solution (..), solutions)
+import Text.Printf (printf)
 
 titleLength :: Int
-titleLength = maximum [ length name
-                      | MkSolution name _ _ <- solutions
-                      ]
+titleLength =
+  maximum
+    [ length name
+      | MkSolution name _ _ <- solutions
+    ]
 
 printTableAnchor :: Bool -> IO ()
 printTableAnchor top =
-  printf "%s─%s─%s───────────\n"
+  printf
+    "%s─%s─%s───────────\n"
     (if top then "┌" else "└")
-    (take titleLength $ repeat '─')
+    (replicate titleLength '─')
     (if top then "┬" else "┴")
 
 printLine :: String -> String -> IO ()

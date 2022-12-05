@@ -1,7 +1,7 @@
-module Day4(part1, part2) where
+module Day4 (part1, part2) where
 
-import qualified Data.ByteString.Char8 as BS
-import           Data.ByteString (ByteString)
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 qualified as BS
 
 readSectionAssignment :: ByteString -> ((Int, Int), (Int, Int))
 readSectionAssignment s =
@@ -15,17 +15,22 @@ readSectionAssignment s =
    in ((a, b), (c, d))
 
 part1 :: ByteString -> Int
-part1 = length
-  . filter (\((a, b), (c, d)) -> (a <= c && d <= b) || (c <= a && b <= d))
-  . map readSectionAssignment
-  . BS.lines
+part1 =
+  length
+    . filter (\((a, b), (c, d)) -> (a <= c && d <= b) || (c <= a && b <= d))
+    . map readSectionAssignment
+    . BS.lines
 
 part2 :: ByteString -> Int
-part2 = length
-  . filter (\((a, b), (c, d)) -> not
-             $ (a < c && b < c)
-             || (a > d && b > d)
-             || (c < a && d < a)
-             || (c > b && d > b))
-  . map readSectionAssignment
-  . BS.lines
+part2 =
+  length
+    . filter
+      ( \((a, b), (c, d)) ->
+          not $
+            (a < c && b < c)
+              || (a > d && b > d)
+              || (c < a && d < a)
+              || (c > b && d > b)
+      )
+    . map readSectionAssignment
+    . BS.lines
