@@ -2,20 +2,17 @@ module Day6 (part1, part2) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
-import Data.Foldable (Foldable (foldl'))
-import Data.List (sort)
-import Safe (headDef, tailSafe)
 
 solve :: Int -> ByteString -> Int
-solve distinctCount str = go [] 0
+solve requiredCount input = go BS.empty 0
   where
-    go :: [Char] -> Int -> Int
-    go acc idx
-      | length acc == distinctCount = idx
-      | char `notElem` acc = go (char : acc) (idx + 1)
-      | otherwise = go (char : takeWhile (/= char) acc) (idx + 1)
+    go :: ByteString -> Int -> Int
+    go currentRun idx
+      | BS.length currentRun == requiredCount = idx
+      | currentChar `BS.notElem` currentRun = go (BS.cons currentChar currentRun) (idx + 1)
+      | otherwise = go (currentChar `BS.cons` BS.takeWhile (/= currentChar) currentRun) (idx + 1)
       where
-        char = BS.index str idx
+        currentChar = BS.index input idx
 
 part1 :: ByteString -> Int
 part1 = solve 4
