@@ -13,7 +13,7 @@ library
     build-depends:    base, safe, containers, split, deepseq, bytestring, vector
     hs-source-dirs:   solutions
     exposed-modules:  Solutions
-    other-modules:    Day1, Day2, Day3, Day4, Day5
+    other-modules:    Day1, Day2, Day3, Day4, Day5, Day6
 
 executable aoc22
     import:           opts

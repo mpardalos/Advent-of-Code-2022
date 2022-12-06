@@ -8,6 +8,7 @@ import Day2 (part1, part2)
 import Day3 (part1, part2)
 import Day4 (part1, part2)
 import Day5 (part1, part2)
+import Day6 (part1, part2)
 
 data Solution where
   MkSolution :: (NFData a, Show a) => String -> (ByteString -> a) -> FilePath -> Solution
@@ -23,5 +24,7 @@ solutions =
     MkSolution "Day 4 part 1" Day4.part1 "day4",
     MkSolution "Day 4 part 2" Day4.part2 "day4",
     MkSolution "Day 5 part 1" Day5.part1 "day5",
-    MkSolution "Day 5 part 2" Day5.part2 "day5"
+    MkSolution "Day 5 part 2" Day5.part2 "day5",
+    MkSolution "Day 6 part 1" Day6.part1 "day6",
+    MkSolution "Day 6 part 2" Day6.part2 "day6"
   ]
