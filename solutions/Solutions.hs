@@ -2,7 +2,6 @@ module Solutions (Solution (..), solutions) where
 
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 qualified as BS
 import Day1 (part1, part2)
 import Day2 (part1, part2)
 import Day3 (part1, part2)

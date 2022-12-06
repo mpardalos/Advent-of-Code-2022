@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module Day4 (part1, part2) where
 
 import Data.ByteString (ByteString)

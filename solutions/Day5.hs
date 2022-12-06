@@ -1,11 +1,11 @@
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Day5 (part1, part2) where
 
-import Control.Monad.ST
+import Control.Monad.ST (ST)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Foldable (foldl')
