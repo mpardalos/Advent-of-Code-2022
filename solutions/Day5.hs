@@ -9,6 +9,7 @@ import Control.Monad.ST
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Foldable (foldl')
+import Data.Maybe (fromJust)
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Vector (Vector)
 import Data.Vector qualified as V
@@ -66,7 +67,7 @@ applyMove shouldReverse state Move {..} = V.modify mutation state
             return cratesLeft
         )
         fromStack
-      Just cratesTaken <- readSTRef cratesTakenRef
+      cratesTaken <- fromJust <$> readSTRef cratesTakenRef
       if shouldReverse
         then MV.modify mutState (BS.append (BS.reverse cratesTaken)) toStack
         else MV.modify mutState (BS.append cratesTaken) toStack
