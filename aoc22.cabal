@@ -9,19 +9,41 @@ common opts
     default-language: Haskell2010
 
 library
-    import:           opts
-    build-depends:    base, safe, containers, split, deepseq, bytestring, vector
-    hs-source-dirs:   solutions
+    import: opts
+    build-depends:
+        base
+        safe
+        containers
+        split
+        deepseq
+        bytestring
+        vector
+    hs-source-dirs: solutions
     exposed-modules:  Solutions
-    other-modules:    Day1, Day2, Day3, Day4, Day5, Day6, Day7
+    other-modules:
+        Day1
+        Day2
+        Day3
+        Day4
+        Day5
+        Day6
+        Day7
 
 executable aoc22
-    import:           opts
-    build-depends:    base, aoc22, bytestring
-    main-is:          Main.hs
+    import: opts
+    build-depends:
+        base
+        aoc22
+        bytestring
+    main-is: Main.hs
 
 benchmark bench
-    import:           opts
-    type:             exitcode-stdio-1.0
-    build-depends:    base, aoc22, criterion, bytestring, containers
-    main-is:          Benchmark.hs
+    import: opts
+    type: exitcode-stdio-1.0
+    build-depends:
+        base
+        aoc22
+        criterion
+        bytestring
+        containers
+    main-is: Benchmark.hs
