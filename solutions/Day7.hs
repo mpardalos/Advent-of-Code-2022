@@ -5,13 +5,16 @@ module Day7 (part1, part2) where
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.List (foldl')
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (fromJust)
 import Data.Vector (Vector)
 import Data.Vector qualified as V
 
 data Line
   = LineCD !ByteString
   | LineLS
-  | LineFile !ByteString !Int
+  | LineFile !Int
   | LineDir !ByteString
   deriving (Show)
 
@@ -22,9 +25,7 @@ parseLine line = case BS.head line of
     'l' -> LineLS
     _ -> undefined
   'd' -> LineDir (BS.drop 4 line)
-  _ ->
-    let Just (size, spacePath) = BS.readInt line
-     in LineFile (BS.drop 1 spacePath) size
+  _ -> LineFile $ fst $ fromJust $ BS.readInt line
 
 type Path = Vector ByteString
 
@@ -80,7 +81,7 @@ dirTreeFromLines = snd . foldl' go (V.singleton "/", Dir "/" 0 V.empty)
     go (path, dirTree) (LineCD "..") = (V.init path, dirTree)
     go (path, dirTree) (LineCD dirname) = (V.snoc path dirname, dirTree)
     go (path, dirTree) LineLS = (path, dirTree)
-    go (path, dirTree) (LineFile _ size) = (path, addToPath path size dirTree)
+    go (path, dirTree) (LineFile size) = (path, addToPath path size dirTree)
     go (path, dirTree) (LineDir name) = (path, createPath (V.snoc path name) dirTree)
 
 dirSizes :: DirTree -> [Int]
