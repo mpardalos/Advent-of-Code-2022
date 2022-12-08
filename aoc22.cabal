@@ -12,29 +12,31 @@ library
     import: opts
     build-depends:
         base
-        safe
-        containers
-        split
-        deepseq
-        bytestring
-        vector
+      , safe
+      , containers
+      , split
+      , deepseq
+      , bytestring
+      , vector
+      , matrix
     hs-source-dirs: solutions
     exposed-modules:  Solutions
     other-modules:
         Day1
-        Day2
-        Day3
-        Day4
-        Day5
-        Day6
-        Day7
+      , Day2
+      , Day3
+      , Day4
+      , Day5
+      , Day6
+      , Day7
+      , Day8
 
 executable aoc22
     import: opts
     build-depends:
         base
-        aoc22
-        bytestring
+      , aoc22
+      , bytestring
     main-is: Main.hs
 
 benchmark bench
@@ -42,8 +44,8 @@ benchmark bench
     type: exitcode-stdio-1.0
     build-depends:
         base
-        aoc22
-        criterion
-        bytestring
-        containers
+      , aoc22
+      , criterion
+      , bytestring
+      , containers
     main-is: Benchmark.hs
