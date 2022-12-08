@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Day7 (part1, part2) where
@@ -35,7 +36,7 @@ data DirTree
       -- ^ Name
       Int
       -- ^ Size
-      (Vector DirTree)
+      !(Map ByteString DirTree)
       -- ^ Children
   deriving (Show)
 
@@ -47,12 +48,9 @@ addToPath path addSize (Dir name size children)
       Dir
         name
         (size + addSize)
-        ( V.map
-            ( \child@(Dir childName _ _) ->
-                if childName == (path V.! 1)
-                  then addToPath (V.tail path) addSize child
-                  else child
-            )
+        ( Map.adjust
+            (addToPath (V.tail path) addSize)
+            (path V.! 1)
             children
         )
 
@@ -60,22 +58,27 @@ createPath :: Path -> DirTree -> DirTree
 createPath path (Dir name size children)
   | V.length path == 0 = error "Cannot add to empty path"
   | V.length path == 1 = error "Cannot add a root path (only a single segment)"
-  | V.length path == 2 = Dir name size (V.cons (Dir (path V.! 1) 0 V.empty) children)
+  | V.length path == 2 =
+      Dir
+        name
+        size
+        ( Map.insert
+            (path V.! 1)
+            (Dir (path V.! 1) 0 Map.empty)
+            children
+        )
   | otherwise =
       Dir
         name
         size
-        ( V.map
-            ( \child@(Dir childName _ _) ->
-                if childName == (path V.! 1)
-                  then createPath (V.tail path) child
-                  else child
-            )
+        ( Map.adjust
+            (createPath (V.unsafeTail path))
+            (path V.! 1)
             children
         )
 
 dirTreeFromLines :: [Line] -> DirTree
-dirTreeFromLines = snd . foldl' go (V.singleton "/", Dir "/" 0 V.empty)
+dirTreeFromLines = snd . foldl' go (V.singleton "/", Dir "/" 0 Map.empty)
   where
     go :: (Path, DirTree) -> Line -> (Path, DirTree)
     go (path, dirTree) (LineCD "..") = (V.init path, dirTree)
