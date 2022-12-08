@@ -32,18 +32,19 @@ type Path = Vector ByteString
 
 data DirTree
   = Dir
-      ByteString
+      !ByteString
       -- ^ Name
-      Int
+      !Int
       -- ^ Size
       !(Map ByteString DirTree)
       -- ^ Children
   deriving (Show)
 
 addToPath :: Path -> Int -> DirTree -> DirTree
-addToPath path addSize (Dir name size children)
+addToPath !path addSize (Dir name size children)
   | V.length path == 0 = error "Cannot add to empty path"
-  | V.length path == 1 = Dir name (size + addSize) children
+  | V.length path == 1 =
+      Dir name (size + addSize) children
   | otherwise =
       Dir
         name
