@@ -49,7 +49,8 @@ addToPath !path addSize (Dir name size children)
       Dir
         name
         (size + addSize)
-        ( Map.adjust
+        ( {-# SCC "addToPath_adjust" #-}
+          Map.adjust
             (addToPath (V.tail path) addSize)
             (path V.! 1)
             children
@@ -63,7 +64,8 @@ createPath path (Dir name size children)
       Dir
         name
         size
-        ( Map.insert
+        ( {-# SCC "createPath_insert" #-}
+          Map.insert
             (path V.! 1)
             (Dir (path V.! 1) 0 Map.empty)
             children
@@ -72,7 +74,8 @@ createPath path (Dir name size children)
       Dir
         name
         size
-        ( Map.adjust
+        ( {-# SCC "createPath_adjust" #-}
+          Map.adjust
             (createPath (V.unsafeTail path))
             (path V.! 1)
             children
