@@ -32,9 +32,9 @@ type Path = Vector ByteString
 
 data DirTree
   = Dir
-      !ByteString
+      {-# UNPACK #-} !ByteString
       -- ^ Name
-      !Int
+      {-# UNPACK #-} !Int
       -- ^ Size
       !(Map ByteString DirTree)
       -- ^ Children
