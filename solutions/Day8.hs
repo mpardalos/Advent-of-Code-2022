@@ -1,21 +1,27 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Day8 (part1, part2) where
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, zipWithM_)
 import Control.Monad.ST
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Char (ord)
 import Data.Foldable (Foldable (..))
 import Data.STRef (STRef, modifySTRef, newSTRef, readSTRef, writeSTRef)
-import Data.Vector (Vector)
-import Data.Vector qualified as V
-import Data.Vector.Mutable (MVector)
-import Data.Vector.Mutable qualified as MV
+import Data.Vector.Generic qualified as G
+import Data.Vector.Generic.Mutable qualified as GM
+import Data.Vector.Unboxed (Vector)
+import Data.Vector.Unboxed qualified as V
+import Data.Vector.Unboxed.Mutable (MVector)
+import Data.Vector.Unboxed.Mutable qualified as MV
 import Debug.Trace
 import GHC.Stack (HasCallStack)
 import Text.Printf (printf)
@@ -24,6 +30,7 @@ readInput :: ByteString -> (Int, Vector Int)
 readInput input = (length rows, V.fromList $ concat rows)
   where
     rows = map (map readDigit . BS.unpack) $ BS.lines input
+
     readDigit '0' = 0
     readDigit '1' = 1
     readDigit '2' = 2
@@ -84,11 +91,56 @@ part1 input = length $ filter fst $ V.toList visibleForest
           markExternallyVisiblePass maxSeenRef forest (index row col)
 
 data ScenicScores = ScenicScores
-  { west :: Int,
-    north :: Int,
-    east :: Int,
-    south :: Int
+  { west :: {-# UNPACK #-} !Int,
+    north :: {-# UNPACK #-} !Int,
+    east :: {-# UNPACK #-} !Int,
+    south :: {-# UNPACK #-} !Int
   }
+
+instance GM.MVector MVector ScenicScores where
+  basicLength :: MVector s ScenicScores -> Int
+  basicLength (MV_ScenicScores v) = GM.basicLength v `div` 3
+
+  basicUnsafeSlice :: Int -> Int -> MVector s ScenicScores -> MVector s ScenicScores
+  basicUnsafeSlice a b (MV_ScenicScores v) = MV_ScenicScores $ GM.basicUnsafeSlice (a * 4) (b * 4) v
+
+  basicOverlaps :: MVector s ScenicScores -> MVector s ScenicScores -> Bool
+  basicOverlaps (MV_ScenicScores v0) (MV_ScenicScores v1) = GM.basicOverlaps v0 v1
+
+  basicUnsafeNew :: Int -> ST s (MVector s ScenicScores)
+  basicUnsafeNew n = MV_ScenicScores <$> GM.basicUnsafeNew (4 * n)
+
+  basicUnsafeRead :: MVector s ScenicScores -> Int -> ST s ScenicScores
+  basicUnsafeRead (MV_ScenicScores v) n' = do
+    [w, n, e, s] <- mapM (GM.basicUnsafeRead v) [4 * n', 4 * n' + 1, 4 * n' + 2, 4 * n' + 3]
+    return $ ScenicScores w n e s
+
+  basicUnsafeWrite :: MVector s ScenicScores -> Int -> ScenicScores -> ST s ()
+  basicUnsafeWrite (MV_ScenicScores v) n' (ScenicScores w n e s) = zipWithM_ (GM.basicUnsafeWrite v) [4 * n', 4 * n' + 1, 4 * n' + 2, 4 * n' + 3] [w, n, e, s]
+
+instance G.Vector Vector ScenicScores where
+  basicUnsafeFreeze :: G.Mutable Vector s ScenicScores -> ST s (Vector ScenicScores)
+  basicUnsafeFreeze (MV_ScenicScores v) = V_ScenicScores <$> G.basicUnsafeFreeze v
+
+  basicUnsafeThaw :: Vector ScenicScores -> ST s (G.Mutable Vector s ScenicScores)
+  basicUnsafeThaw (V_ScenicScores v) = MV_ScenicScores <$> G.basicUnsafeThaw v
+
+  basicLength :: Vector ScenicScores -> Int
+  basicLength (V_ScenicScores v) = G.basicLength v `div` 3
+
+  basicUnsafeSlice :: Int -> Int -> Vector ScenicScores -> Vector ScenicScores
+  basicUnsafeSlice a b (V_ScenicScores v) = V_ScenicScores $ G.basicUnsafeSlice (a * 3) (b * 3) v
+
+  basicUnsafeIndexM (V_ScenicScores v) n' = do
+    mapM (G.basicUnsafeIndexM v) [4 * n', 4 * n' + 1, 4 * n' + 2, 4 * n' + 3] >>= \case
+      [w, n, e, s] -> return $ ScenicScores w n e s
+      _ -> undefined
+
+newtype instance MVector s ScenicScores = MV_ScenicScores (MVector s Int)
+
+newtype instance Vector ScenicScores = V_ScenicScores (Vector Int)
+
+instance V.Unbox ScenicScores
 
 instance Show ScenicScores where
   show (ScenicScores w n e s) = printf "%2d*%2d*%2d*%2d" w n e s
@@ -99,7 +151,7 @@ summarizeScore (ScenicScores w n e s) = w * n * e * s
 maxHeight :: Int
 maxHeight = 10
 
-showForest :: Show a => Int -> Vector (a, Int) -> String
+showForest :: (MV.Unbox a, Show a) => Int -> Vector (a, Int) -> String
 showForest size forest =
   let (row, rest) = V.splitAt size forest
    in if V.length row > 0
@@ -125,7 +177,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
           MV.modifyM
             forest
             ( \(scenicScores, height) -> do
-                closestBlockingIndex <- maximum <$> V.freeze (MV.drop height lastSeenVec)
+                closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
                 let directionalScenicScore = col - closestBlockingIndex
                 MV.write lastSeenVec height col
                 return (scenicScores {west = directionalScenicScore}, height)
@@ -139,7 +191,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
           MV.modifyM
             forest
             ( \(scenicScores, height) -> do
-                closestBlockingIndex <- minimum <$> V.freeze (MV.drop height lastSeenVec)
+                closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
                 let directionalScenicScore = closestBlockingIndex - col
                 MV.write lastSeenVec height col
                 return (scenicScores {east = directionalScenicScore}, height)
@@ -153,7 +205,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
           MV.modifyM
             forest
             ( \(scenicScores, height) -> do
-                closestBlockingIndex <- maximum <$> V.freeze (MV.drop height lastSeenVec)
+                closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
                 let directionalScenicScore = row - closestBlockingIndex
                 MV.write lastSeenVec height row
                 return (scenicScores {north = directionalScenicScore}, height)
@@ -167,7 +219,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
           MV.modifyM
             forest
             ( \(scenicScores, height) -> do
-                closestBlockingIndex <- minimum <$> V.freeze (MV.drop height lastSeenVec)
+                closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
                 let directionalScenicScore = closestBlockingIndex - row
                 MV.write lastSeenVec height row
                 return (scenicScores {south = directionalScenicScore}, height)
