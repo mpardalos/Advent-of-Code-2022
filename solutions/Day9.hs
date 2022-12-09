@@ -24,26 +24,11 @@ readInput =
 
 tailFollow :: Position -> Position -> Position
 tailFollow (P tailX tailY) (P headX headY) =
-  case (headX - tailX, headY - tailY) of
-    -- horizontally or vertically away
-    (-2, 0) -> P (tailX - 1) tailY -- Left
-    (0, 2) -> P tailX (tailY + 1) -- Up
-    (2, 0) -> P (tailX + 1) tailY -- Right
-    (0, -2) -> P tailX (tailY - 1) -- Down
-    -- Diagonally away
-    (-2, 1) -> P (tailX - 1) (tailY + 1)
-    (-1, 2) -> P (tailX - 1) (tailY + 1)
-    (-2, 2) -> P (tailX - 1) (tailY + 1)
-    (1, 2) -> P (tailX + 1) (tailY + 1)
-    (2, 1) -> P (tailX + 1) (tailY + 1)
-    (2, 2) -> P (tailX + 1) (tailY + 1)
-    (2, -1) -> P (tailX + 1) (tailY - 1)
-    (1, -2) -> P (tailX + 1) (tailY - 1)
-    (2, -2) -> P (tailX + 1) (tailY - 1)
-    (-1, -2) -> P (tailX - 1) (tailY - 1)
-    (-2, -1) -> P (tailX - 1) (tailY - 1)
-    (-2, -2) -> P (tailX - 1) (tailY - 1)
-    _ -> P tailX tailY
+  let xdiff = headX - tailX
+      ydiff = headY - tailY
+   in if abs xdiff <= 1 && abs ydiff <= 1
+        then P tailX tailY
+        else P (tailX + sign xdiff) (tailY + sign ydiff)
 
 part1 :: ByteString -> Int
 part1 =
@@ -61,3 +46,9 @@ part2 =
     . iterate (scanl1 tailFollow)
     . scanl' (flip ($)) (P 0 0)
     . readInput
+
+sign :: Int -> Int
+sign x
+  | x < 0 = -1
+  | x > 0 = 1
+  | otherwise = 0
