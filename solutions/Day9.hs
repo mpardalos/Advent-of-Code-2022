@@ -5,24 +5,8 @@ import Data.ByteString.Char8 qualified as BS
 import Data.List (scanl')
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
-import Debug.Trace
 
-data Position = P Int Int deriving (Eq, Ord)
-
-instance Show Position where
-  show (P x y) = show (x, y)
-
-left :: Position -> Position
-left (P x y) = P (x - 1) y
-
-right :: Position -> Position
-right (P x y) = P (x + 1) y
-
-up :: Position -> Position
-up (P x y) = P x (y + 1)
-
-down :: Position -> Position
-down (P x y) = P x (y - 1)
+data Position = P Int Int deriving (Eq, Ord, Show)
 
 readInput :: ByteString -> [Position -> Position]
 readInput =
@@ -30,10 +14,10 @@ readInput =
     ( \line ->
         let count = fst $ fromJust $ BS.readInt (BS.drop 2 line)
          in replicate count $ case BS.head line of
-              'L' -> left
-              'U' -> up
-              'R' -> right
-              'D' -> down
+              'L' -> \(P x y) -> P (x - 1) y
+              'U' -> \(P x y) -> P x (y + 1)
+              'R' -> \(P x y) -> P (x + 1) y
+              'D' -> \(P x y) -> P x (y - 1)
               _ -> error "Invalid input"
     )
     . BS.lines
@@ -50,15 +34,12 @@ tailFollow (P tailX tailY) (P headX headY) =
     (-2, 1) -> P (tailX - 1) (tailY + 1)
     (-1, 2) -> P (tailX - 1) (tailY + 1)
     (-2, 2) -> P (tailX - 1) (tailY + 1)
-
     (1, 2) -> P (tailX + 1) (tailY + 1)
     (2, 1) -> P (tailX + 1) (tailY + 1)
     (2, 2) -> P (tailX + 1) (tailY + 1)
-
     (2, -1) -> P (tailX + 1) (tailY - 1)
     (1, -2) -> P (tailX + 1) (tailY - 1)
     (2, -2) -> P (tailX + 1) (tailY - 1)
-
     (-1, -2) -> P (tailX - 1) (tailY - 1)
     (-2, -1) -> P (tailX - 1) (tailY - 1)
     (-2, -2) -> P (tailX - 1) (tailY - 1)
@@ -76,14 +57,7 @@ part2 :: ByteString -> Int
 part2 =
   Set.size
     . Set.fromList
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
-    . scanl1 tailFollow
+    . (!! 9)
+    . iterate (scanl1 tailFollow)
     . scanl' (flip ($)) (P 0 0)
     . readInput
