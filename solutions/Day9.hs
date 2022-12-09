@@ -6,7 +6,7 @@ import Data.List (scanl')
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
 
-data Position = P Int Int deriving (Eq, Ord, Show)
+data Position = P {-# UNPACK #-} !Int {-# UNPACK #-} !Int deriving (Eq, Ord, Show)
 
 readInput :: ByteString -> [Position -> Position]
 readInput =
