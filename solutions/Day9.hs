@@ -53,8 +53,15 @@ part1 =
 part2 :: ByteString -> Int
 part2 =
   countUniquePositions
-    . (!! 9)
-    . iterate (scanl1' tailFollow)
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
+    . scanl1' tailFollow
     . scanl' (flip ($)) (P 0 0)
     . readInput
 
