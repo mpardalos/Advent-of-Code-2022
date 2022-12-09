@@ -46,7 +46,7 @@ countUniquePositions =
 part1 :: ByteString -> Int
 part1 =
   countUniquePositions
-    . scanl1 tailFollow
+    . scanl1' tailFollow
     . scanl' (flip ($)) (P 0 0)
     . readInput
 
@@ -54,9 +54,14 @@ part2 :: ByteString -> Int
 part2 =
   countUniquePositions
     . (!! 9)
-    . iterate (scanl1 tailFollow)
+    . iterate (scanl1' tailFollow)
     . scanl' (flip ($)) (P 0 0)
     . readInput
+
+scanl1' :: (a -> a -> a) -> [a] -> [a]
+scanl1' f (x : xs) = scanl' f x xs
+scanl1' _ [] = []
+{-# INLINE scanl1' #-}
 
 sign :: (Ord a, Num a, Num b) => a -> b
 sign x
