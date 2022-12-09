@@ -52,7 +52,7 @@ part1 input = length $ filter fst $ V.toList visibleForest
 
     markExternallyVisiblePass :: forall s. STRef s Int -> MVector s (Bool, Int) -> Int -> ST s ()
     markExternallyVisiblePass maxSeenRef forest idx =
-      MV.modifyM
+      MV.unsafeModifyM
         forest
         ( \(alreadyVisible, height) -> do
             maxSeen <- readSTRef maxSeenRef
@@ -174,7 +174,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
       forM_ [0 .. size - 1] $ \row -> do
         lastSeenVec <- MV.replicate maxHeight 0
         forM_ [0 .. size - 1] $ \col ->
-          MV.modifyM
+          MV.unsafeModifyM
             forest
             ( \(scenicScores, height) -> do
                 closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
@@ -188,7 +188,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
       forM_ [0 .. size - 1] $ \row -> do
         lastSeenVec <- MV.replicate maxHeight (size - 1)
         forM_ (reverse [0 .. size - 1]) $ \col ->
-          MV.modifyM
+          MV.unsafeModifyM
             forest
             ( \(scenicScores, height) -> do
                 closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
@@ -202,7 +202,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
       forM_ [0 .. size - 1] $ \col -> do
         lastSeenVec <- MV.replicate maxHeight 0
         forM_ [0 .. size - 1] $ \row ->
-          MV.modifyM
+          MV.unsafeModifyM
             forest
             ( \(scenicScores, height) -> do
                 closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
@@ -216,7 +216,7 @@ part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
       forM_ [0 .. size - 1] $ \col -> do
         lastSeenVec <- MV.replicate 10 (size - 1)
         forM_ (reverse [0 .. size - 1]) $ \row ->
-          MV.modifyM
+          MV.unsafeModifyM
             forest
             ( \(scenicScores, height) -> do
                 closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
