@@ -1,4 +1,6 @@
-module Solutions (Solution (..), solutions) where
+{-# LANGUAGE FlexibleInstances #-}
+
+module Solutions (DisplaySolution (..), Solution (..), solutions) where
 
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
@@ -13,7 +15,16 @@ import Day8 (part1, part2)
 import Day9 (part1, part2)
 
 data Solution where
-  MkSolution :: (NFData a, Show a) => String -> (ByteString -> a) -> FilePath -> Solution
+  MkSolution :: (NFData a, DisplaySolution a) => String -> (ByteString -> a) -> FilePath -> Solution
+
+class DisplaySolution a where
+  displaySolution :: a -> String
+
+instance DisplaySolution Int where
+  displaySolution = show
+
+instance DisplaySolution String where
+  displaySolution = id
 
 solutions :: [Solution]
 solutions =

@@ -15,7 +15,7 @@ import Data.ByteString.Char8 (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Solutions (Solution (MkSolution), solutions)
+import Solutions (DisplaySolution (..), Solution (MkSolution), solutions)
 
 allInputs :: IO (Map String ByteString)
 allInputs = fmap Map.fromList $ forM solutions $ \(MkSolution _ _ inputName) -> do
@@ -35,6 +35,6 @@ main =
       env allInputs $ \inputs ->
         bench "All together" $
           nf
-            (map (\(MkSolution _ solution inputName) -> show $ solution (inputs Map.! inputName)))
+            (map (\(MkSolution _ solution inputName) -> displaySolution $ solution (inputs Map.! inputName)))
             solutions
     ]
