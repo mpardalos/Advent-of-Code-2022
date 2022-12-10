@@ -1,12 +1,10 @@
 module Day10 (part1, part2) where
 
-import Control.DeepSeq (force)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.List (intercalate, scanl')
+import Data.List.Split (chunksOf)
 import Data.Maybe (fromJust)
-import Debug.Trace
-import Text.Printf (printf)
 
 type Instruction = Int -> Int
 
@@ -32,26 +30,15 @@ part1 input =
           BS.lines input
 
 part2 :: ByteString -> String
-part2 input = intercalate "\n" $ map (map charForPixel) pixelCycles
+part2 input = intercalate "\n" $ map renderRow $ take 6 $ chunksOf 40 spritePositions
   where
-    charForPixel :: (Int, Int) -> Char
-    charForPixel (horizontalIndex, drawingCycle) =
-      if abs ((spritePositions !! drawingCycle) - horizontalIndex) <= 1
-        then '#'
-        else ' '
-
-    -- What cycle each pixel is drawn at
-    pixelCycles :: [[(Int, Int)]]
-    pixelCycles =
-      map
-        (zip [0 .. 39])
-        [ [0 .. 39],
-          [40 .. 79],
-          [80 .. 119],
-          [120 .. 159],
-          [160 .. 199],
-          [200 .. 239]
-        ]
+    renderRow :: [Int] -> [Char]
+    renderRow rowSpritePositions =
+      [ if abs (spritePosition - rowPixelIndex) <= 1
+          then '█'
+          else ' '
+        | (rowPixelIndex, spritePosition) <- zip [0 ..] rowSpritePositions
+      ]
 
     spritePositions :: [Int]
     spritePositions =
