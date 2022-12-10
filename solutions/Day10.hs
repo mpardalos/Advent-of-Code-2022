@@ -22,15 +22,14 @@ readInputLine line = case BS.head line of
 part1 :: ByteString -> Int
 part1 input =
   sum $
-    [ n * registerValues !! n
+    [ n * registerValues !! (n - 1)
       | n <- [20, 60, 100, 140, 180, 220]
     ]
   where
     registerValues =
-      (1 :) $
-        scanl' runInstruction 1 $
-          concatMap readInputLine $
-            BS.lines input
+      scanl' runInstruction 1 $
+        concatMap readInputLine $
+          BS.lines input
 
 part2 :: ByteString -> String
 part2 input = intercalate "\n" $ map (map charForPixel) pixelCycles
@@ -46,17 +45,16 @@ part2 input = intercalate "\n" $ map (map charForPixel) pixelCycles
     pixelCycles =
       map
         (zip [0 .. 39])
-        [ [1 .. 40],
-          [41 .. 80],
-          [81 .. 120],
-          [121 .. 160],
-          [161 .. 200],
-          [201 .. 240]
+        [ [0 .. 39],
+          [40 .. 79],
+          [80 .. 119],
+          [120 .. 159],
+          [160 .. 199],
+          [200 .. 239]
         ]
 
     spritePositions :: [Int]
     spritePositions =
-      (1 :) $
-        scanl' runInstruction 1 $
-          concatMap readInputLine $
-            BS.lines input
+      scanl' runInstruction 1 $
+        concatMap readInputLine $
+          BS.lines input
