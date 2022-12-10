@@ -7,7 +7,6 @@ import Data.Int (Int32)
 import Data.IntSet qualified as IntSet
 import Data.List (scanl')
 import Data.Maybe (fromJust)
-import Debug.Trace (traceShow)
 
 data Position = P {-# UNPACK #-} !Int32 {-# UNPACK #-} !Int32 deriving (Eq, Ord, Show)
 

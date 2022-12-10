@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Day8 (part1, part2) where
 
@@ -13,16 +14,13 @@ import Control.Monad (forM_, zipWithM_)
 import Control.Monad.ST
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
-import Data.Char (ord)
-import Data.Foldable (Foldable (..))
-import Data.STRef (STRef, modifySTRef, newSTRef, readSTRef, writeSTRef)
+import Data.STRef (STRef, newSTRef, readSTRef, writeSTRef)
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as GM
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as V
 import Data.Vector.Unboxed.Mutable (MVector)
 import Data.Vector.Unboxed.Mutable qualified as MV
-import Debug.Trace
 import GHC.Stack (HasCallStack)
 import Text.Printf (printf)
 
@@ -41,6 +39,7 @@ readInput input = (length rows, V.fromList $ concat rows)
     readDigit '7' = 7
     readDigit '8' = 8
     readDigit '9' = 9
+    readDigit c = error ("Not a digit: " ++ [c])
 
 part1 :: HasCallStack => ByteString -> Int
 part1 input = length $ filter fst $ V.toList visibleForest
@@ -50,8 +49,8 @@ part1 input = length $ filter fst $ V.toList visibleForest
 
     index row col = size * row + col
 
-    markExternallyVisiblePass :: forall s. STRef s Int -> MVector s (Bool, Int) -> Int -> ST s ()
-    markExternallyVisiblePass maxSeenRef forest idx =
+    markExternallyVisiblePass :: forall s. STRef s Int -> MVector s (Bool, Int) -> Int -> Int -> ST s ()
+    markExternallyVisiblePass maxSeenRef forest row col =
       MV.unsafeModifyM
         forest
         ( \(alreadyVisible, height) -> do
@@ -62,7 +61,7 @@ part1 input = length $ filter fst $ V.toList visibleForest
                 return (True, height)
               else return (alreadyVisible, height)
         )
-        idx
+        (index row col)
 
     markExternallyVisible :: forall s. MVector s (Bool, Int) -> ST s ()
     markExternallyVisible forest = do
@@ -70,25 +69,25 @@ part1 input = length $ filter fst $ V.toList visibleForest
       forM_ [0 .. size - 1] $ \row -> do
         maxSeenRef <- newSTRef 0
         forM_ [0 .. size - 1] $ \col ->
-          markExternallyVisiblePass maxSeenRef forest (index row col)
+          markExternallyVisiblePass maxSeenRef forest row col
 
       -- Rows, right-to-left
       forM_ [0 .. size - 1] $ \row -> do
         maxSeenRef <- newSTRef 0
         forM_ (reverse [0 .. size - 1]) $ \col ->
-          markExternallyVisiblePass maxSeenRef forest (index row col)
+          markExternallyVisiblePass maxSeenRef forest row col
 
       -- Columns, top-to-bottom
       forM_ [0 .. size - 1] $ \col -> do
         maxSeenRef <- newSTRef 0
         forM_ [0 .. size - 1] $ \row ->
-          markExternallyVisiblePass maxSeenRef forest (index row col)
+          markExternallyVisiblePass maxSeenRef forest row col
 
       -- Columns, bottom-to-top
       forM_ [0 .. size - 1] $ \col -> do
         maxSeenRef <- newSTRef 0
         forM_ (reverse [0 .. size - 1]) $ \row ->
-          markExternallyVisiblePass maxSeenRef forest (index row col)
+          markExternallyVisiblePass maxSeenRef forest row col
 
 data ScenicScores = ScenicScores
   { west :: {-# UNPACK #-} !Int,
@@ -117,6 +116,9 @@ instance GM.MVector MVector ScenicScores where
 
   basicUnsafeWrite :: MVector s ScenicScores -> Int -> ScenicScores -> ST s ()
   basicUnsafeWrite (MV_ScenicScores v) n' (ScenicScores w n e s) = zipWithM_ (GM.basicUnsafeWrite v) [4 * n', 4 * n' + 1, 4 * n' + 2, 4 * n' + 3] [w, n, e, s]
+
+  basicInitialize :: MVector s ScenicScores -> ST s ()
+  basicInitialize (MV_ScenicScores v) = GM.basicInitialize v
 
 instance G.Vector Vector ScenicScores where
   basicUnsafeFreeze :: G.Mutable Vector s ScenicScores -> ST s (Vector ScenicScores)
