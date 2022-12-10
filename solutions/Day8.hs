@@ -7,7 +7,7 @@
 
 module Day8 (part1, part2) where
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Monad.ST
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
@@ -36,52 +36,58 @@ readInput input = (length rows, V.fromList $ concat rows)
     readDigit c = error ("Not a digit: " ++ [c])
 
 part1 :: HasCallStack => ByteString -> Int
-part1 input = length $ filter fst $ V.toList visibleForest
+part1 input = V.length $ V.filter id visibleMarkers
   where
-    (size, initialForest) = readInput input
-    visibleForest = V.modify markExternallyVisible $ V.map (False,) initialForest
-
+    (size, forest) = readInput input
     index row col = size * row + col
 
-    markExternallyVisiblePass :: forall s. STRef s Int -> MVector s (Bool, Int) -> Int -> Int -> ST s ()
-    markExternallyVisiblePass maxSeenRef forest row col =
-      MV.unsafeModifyM
-        forest
-        ( \(alreadyVisible, height) -> do
-            maxSeen <- readSTRef maxSeenRef
-            if height > maxSeen
-              then do
-                writeSTRef maxSeenRef height
-                return (True, height)
-              else return (alreadyVisible, height)
-        )
-        (index row col)
+    visibleMarkers =
+      V.zipWith4
+        (\e w n s -> e || w || n || s)
+        eastVisible
+        westVisible
+        northVisible
+        southVisible
 
-    markExternallyVisible :: forall s. MVector s (Bool, Int) -> ST s ()
-    markExternallyVisible forest = do
-      -- Rows, left-to-right
+    eastVisible = runST $ do
+      eastVisibleMut <- MV.replicate (V.length forest) False
       forM_ [0 .. size - 1] $ \row -> do
-        maxSeenRef <- newSTRef 0
+        maxSeenRef <- newSTRef (-1)
         forM_ [0 .. size - 1] $ \col ->
-          markExternallyVisiblePass maxSeenRef forest row col
+          loopBody maxSeenRef eastVisibleMut row col
+      V.freeze eastVisibleMut
 
-      -- Rows, right-to-left
+    westVisible = runST $ do
+      westVisibleMut <- MV.replicate (V.length forest) False
       forM_ [0 .. size - 1] $ \row -> do
-        maxSeenRef <- newSTRef 0
-        forM_ (reverse [0 .. size - 1]) $ \col ->
-          markExternallyVisiblePass maxSeenRef forest row col
+        maxSeenRef <- newSTRef (-1)
+        forM_ (reverse [0 .. size - 1]) $ \col -> do
+          loopBody maxSeenRef westVisibleMut row col
+      V.freeze westVisibleMut
 
-      -- Columns, top-to-bottom
+    northVisible = runST $ do
+      northVisibleMut <- MV.replicate (V.length forest) False
       forM_ [0 .. size - 1] $ \col -> do
-        maxSeenRef <- newSTRef 0
+        maxSeenRef <- newSTRef (-1)
         forM_ [0 .. size - 1] $ \row ->
-          markExternallyVisiblePass maxSeenRef forest row col
+          loopBody maxSeenRef northVisibleMut row col
+      V.freeze northVisibleMut
 
-      -- Columns, bottom-to-top
+    southVisible = runST $ do
+      southVisibleMut <- MV.replicate (V.length forest) False
       forM_ [0 .. size - 1] $ \col -> do
-        maxSeenRef <- newSTRef 0
+        maxSeenRef <- newSTRef (-1)
         forM_ (reverse [0 .. size - 1]) $ \row ->
-          markExternallyVisiblePass maxSeenRef forest row col
+          loopBody maxSeenRef southVisibleMut row col
+      V.freeze southVisibleMut
+
+    loopBody :: STRef s Int -> MVector s Bool -> Int -> Int -> ST s ()
+    loopBody maxSeenRef outputVec row col = do
+      let height = forest V.! index row col
+      maxSeen <- readSTRef maxSeenRef
+      when (height > maxSeen) $ do
+        writeSTRef maxSeenRef height
+        MV.write outputVec (index row col) True
 
 type ScenicScores = (Int, Int, Int, Int)
 
@@ -99,69 +105,55 @@ showForest size forest =
         else ""
 
 part2 :: HasCallStack => ByteString -> Int
-part2 input = maximum $ map (summarizeScore . fst) $ V.toList scenicForest
+part2 input = V.maximum scenicScores
   where
-    (size, initialForest) = readInput input
-    scenicForest = V.modify countVisible $ V.map ((0, 0, 0, 0),) initialForest
-
+    (size, forest) = readInput input
     index row col = size * row + col
+
+    scenicScores = V.zipWith4 (\w e n s -> w * e * n * s) west east north south
 
     -- Keep track of the index at which a height was last seen. Each tree can
     -- see back to the index of the closest tree equal to or taller than itself
-    countVisible :: forall s. MVector s (ScenicScores, Int) -> ST s ()
-    countVisible forest = do
-      -- Rows, left-to-right
+    west = runST $ do
+      westMut <- MV.replicate (V.length forest) 0
       forM_ [0 .. size - 1] $ \row -> do
         lastSeenVec <- MV.replicate maxHeight 0
-        forM_ [0 .. size - 1] $ \col ->
-          MV.unsafeModifyM
-            forest
-            ( \((_, n, e, s), height) -> do
-                closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
-                let directionalScenicScore = col - closestBlockingIndex
-                MV.write lastSeenVec height col
-                return ((directionalScenicScore, n, e, s), height)
-            )
-            (index row col)
+        forM_ [0 .. size - 1] $ \col -> do
+          let height = forest V.! index row col
+          closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
+          MV.write lastSeenVec height col
+          MV.write westMut (index row col) (col - closestBlockingIndex)
+      V.freeze westMut
 
-      -- Rows, right-to-left
+    east = runST $ do
+      eastMut <- MV.replicate (V.length forest) 0
       forM_ [0 .. size - 1] $ \row -> do
         lastSeenVec <- MV.replicate maxHeight (size - 1)
-        forM_ (reverse [0 .. size - 1]) $ \col ->
-          MV.unsafeModifyM
-            forest
-            ( \((w, n, _, s), height) -> do
-                closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
-                let directionalScenicScore = closestBlockingIndex - col
-                MV.write lastSeenVec height col
-                return ((w, n, directionalScenicScore, s), height)
-            )
-            (index row col)
+        forM_ (reverse [0 .. size - 1]) $ \col -> do
+          let height = forest V.! index row col
+          closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
+          MV.write lastSeenVec height col
+          MV.write eastMut (index row col) (closestBlockingIndex - col)
+      V.freeze eastMut
 
-      -- Columns, top-to-bottom
+    north = runST $ do
+      northMut <- MV.replicate (V.length forest) 0
       forM_ [0 .. size - 1] $ \col -> do
         lastSeenVec <- MV.replicate maxHeight 0
-        forM_ [0 .. size - 1] $ \row ->
-          MV.unsafeModifyM
-            forest
-            ( \((w, _, e, s), height) -> do
-                closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
-                let directionalScenicScore = row - closestBlockingIndex
-                MV.write lastSeenVec height row
-                return ((w, directionalScenicScore, e, s), height)
-            )
-            (index row col)
+        forM_ [0 .. size - 1] $ \row -> do
+          let height = forest V.! index row col
+          closestBlockingIndex <- V.maximum <$> V.freeze (MV.drop height lastSeenVec)
+          MV.write lastSeenVec height row
+          MV.write northMut (index row col) (row - closestBlockingIndex)
+      V.freeze northMut
 
-      -- Columns, bottom-to-top
+    south = runST $ do
+      southMut <- MV.replicate (V.length forest) 0
       forM_ [0 .. size - 1] $ \col -> do
         lastSeenVec <- MV.replicate 10 (size - 1)
-        forM_ (reverse [0 .. size - 1]) $ \row ->
-          MV.unsafeModifyM
-            forest
-            ( \((w, n, e, _), height) -> do
-                closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
-                let directionalScenicScore = closestBlockingIndex - row
-                MV.write lastSeenVec height row
-                return ((w, n, e, directionalScenicScore), height)
-            )
-            (index row col)
+        forM_ (reverse [0 .. size - 1]) $ \row -> do
+          let height = forest V.! index row col
+          closestBlockingIndex <- V.minimum <$> V.freeze (MV.drop height lastSeenVec)
+          MV.write lastSeenVec height row
+          MV.write southMut (index row col) (closestBlockingIndex - row)
+      V.freeze southMut
