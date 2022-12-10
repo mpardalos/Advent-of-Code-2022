@@ -1,5 +1,8 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
+import Control.Exception (SomeException, catch, evaluate)
 import Control.Monad (forM_)
 import Data.ByteString.Char8 qualified as BS
 import Solutions (Solution (..), solutions)
@@ -28,5 +31,6 @@ main = do
   printTableAnchor True
   forM_ solutions $ \(MkSolution name solution inputFile) -> do
     input <- BS.readFile ("data/" <> inputFile)
-    printLine name (show $ solution input)
+    answer <- evaluate (show $ solution input) `catch` \(e :: SomeException) -> pure (show e)
+    printLine name answer
   printTableAnchor False
