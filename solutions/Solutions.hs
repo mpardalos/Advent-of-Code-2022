@@ -6,6 +6,7 @@ import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Day1 (part1, part2)
 import Day10 (part1, part2)
+import Day11 (part1, part2)
 import Day2 (part1, part2)
 import Day3 (part1, part2)
 import Day4 (part1, part2)
@@ -48,5 +49,7 @@ solutions =
     MkSolution "Day 9 part 1" Day9.part1 "day9",
     MkSolution "Day 9 part 2" Day9.part2 "day9",
     MkSolution "Day 10 part 1" Day10.part1 "day10",
-    MkSolution "Day 10 part 2" Day10.part2 "day10"
+    MkSolution "Day 10 part 2" Day10.part2 "day10",
+    MkSolution "Day 11 part 1" Day11.part1 "day11",
+    MkSolution "Day 11 part 2" Day11.part2 "day11"
   ]

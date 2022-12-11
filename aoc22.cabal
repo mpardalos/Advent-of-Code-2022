@@ -32,6 +32,7 @@ library
       , Day8
       , Day9
       , Day10
+      , Day11
 
 executable aoc22
     import: opts
