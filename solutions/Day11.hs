@@ -18,11 +18,15 @@ import Data.Vector.Mutable (MVector)
 import GHC.Stack (HasCallStack)
 import Text.Printf (printf)
 
+type MonkeyId = Int
+
+type WorryValue = Integer
+
 data Monkey = Monkey
-  { number :: Int,
-    items :: Vector Int,
-    operation :: Int -> Int,
-    test :: Int -> Int,
+  { number :: MonkeyId,
+    items :: Vector WorryValue,
+    operation :: WorryValue -> WorryValue,
+    test :: WorryValue -> MonkeyId,
     itemsInspected :: Int
   }
 
@@ -46,29 +50,37 @@ readMonkey
     ] =
     Monkey
       { number = readIntPartial $ BS.drop 7 numLine,
-        items = V.fromList $ map readIntPartial $ BS.splitWith (== ' ') $ BS.drop 18 itemsLine,
+        items = V.fromList $ map (fromIntegral . readIntPartial) $ BS.splitWith (== ' ') $ BS.drop 18 itemsLine,
         operation = operation,
         test = \n -> if n `mod` divisor == 0 then ifTrueTarget else ifFalseTarget,
         itemsInspected = 0
       }
     where
-      operationArithmetic :: Int -> Int -> Int
       operationArithmetic = case operationLine `BS.index` 23 of
         '*' -> (*)
         '+' -> (+)
         c -> error ("Unknown operation: " <> show c)
 
       operation = case operationLine `BS.index` 25 of
-        'o' -> \n -> (n `operationArithmetic` n) `div` 3
-        _ -> \n -> (n `operationArithmetic` readIntPartial (BS.drop 25 operationLine)) `div` 3
+        'o' -> \n -> n `operationArithmetic` n
+        _ -> \n -> n `operationArithmetic` fromIntegral (readIntPartial (BS.drop 25 operationLine))
 
-      divisor = readIntPartial $ BS.drop 21 testLine
-      ifTrueTarget = readIntPartial $ BS.drop 29 ifTrueLine
-      ifFalseTarget = readIntPartial $ BS.drop 30 ifFalseLine
+      divisor = fromIntegral $ readIntPartial $ BS.drop 21 testLine
+      ifTrueTarget = fromIntegral $ readIntPartial $ BS.drop 29 ifTrueLine
+      ifFalseTarget = fromIntegral $ readIntPartial $ BS.drop 30 ifFalseLine
 readMonkey _ = error "Invalid input"
 
-runMonkey :: Monkey -> Vector (Int, Int)
-runMonkey Monkey {items, operation, test} =
+runMonkeyPart1 :: Monkey -> Vector (MonkeyId, WorryValue)
+runMonkeyPart1 Monkey {items, operation, test} =
+  V.map
+    ( \worryVal ->
+        let newWorryVal = operation worryVal `div` 3
+         in (test newWorryVal, newWorryVal)
+    )
+    items
+
+runMonkeyPart2 :: Monkey -> Vector (MonkeyId, WorryValue)
+runMonkeyPart2 Monkey {items, operation, test} =
   V.map
     ( \worryVal ->
         let newWorryVal = operation worryVal
@@ -76,8 +88,8 @@ runMonkey Monkey {items, operation, test} =
     )
     items
 
-runRound :: MVector s Monkey -> ST s ()
-runRound monkeys = do
+runRound :: (Monkey -> Vector (MonkeyId, WorryValue)) -> MVector s Monkey -> ST s ()
+runRound runMonkey monkeys = do
   MV.iforM_ monkeys $ \i monkey -> do
     let thrownItems = runMonkey monkey
     MV.modify
@@ -99,13 +111,20 @@ runRound monkeys = do
         toMonkey
 
 part1 :: ByteString -> Int
-part1 input = product $ take 2 $ reverse $ sort $ V.toList $ V.map itemsInspected finalMonkeys
+part1 input =
+  product $ take 2 $ reverse $ sort $ V.toList $ V.map itemsInspected finalMonkeys
   where
     initialMonkeys = readInput input
     finalMonkeys = runST $ do
       monkeysMut <- V.thaw initialMonkeys
-      replicateM_ 20 (runRound monkeysMut)
+      replicateM_ 20 (runRound runMonkeyPart1 monkeysMut)
       V.freeze monkeysMut
 
 part2 :: ByteString -> Int
-part2 = const 0
+part2 input = product $ take 2 $ reverse $ sort $ V.toList $ V.map itemsInspected finalMonkeys
+  where
+    initialMonkeys = readInput input
+    finalMonkeys = runST $ do
+      monkeysMut <- V.thaw initialMonkeys
+      replicateM_ 10000 (runRound runMonkeyPart2 monkeysMut)
+      V.freeze monkeysMut
