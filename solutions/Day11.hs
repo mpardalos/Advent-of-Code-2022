@@ -13,41 +13,26 @@ import Control.Monad.ST (ST, runST)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Functor.Identity (Identity (..))
-import Data.List (sort)
+import Data.List (iterate', sort)
 import Data.List.Split
 import Data.Maybe (fromJust)
 import Data.STRef
 import Data.Vector (Vector)
 import Data.Vector qualified as V
+import Debug.Trace
 
 type MonkeyId = Int
 
 type WorryValue = Int
 
-data GMonkey f = Monkey
+data Monkey = Monkey
   { number :: MonkeyId,
-    items :: f (Vector WorryValue),
+    items :: Vector WorryValue,
     operation :: WorryValue -> WorryValue,
     test :: WorryValue -> MonkeyId,
     testModulo :: Int,
-    itemsInspected :: f Int
+    itemsInspected :: Int
   }
-
-type Monkey = GMonkey Identity
-
-type MutMonkey s = GMonkey (STRef s)
-
-freeze :: MutMonkey s -> ST s Monkey
-freeze Monkey {items, itemsInspected, ..} = do
-  itemsValue <- readSTRef items
-  itemsInspectedValue <- readSTRef itemsInspected
-  return Monkey {items = Identity itemsValue, itemsInspected = Identity itemsInspectedValue, ..}
-
-thaw :: Monkey -> ST s (MutMonkey s)
-thaw Monkey {items, itemsInspected, ..} = do
-  itemsRef <- newSTRef (runIdentity items)
-  itemsInspectedRef <- newSTRef (runIdentity itemsInspected)
-  return Monkey {items = itemsRef, itemsInspected = itemsInspectedRef, ..}
 
 readInput :: ByteString -> Vector Monkey
 readInput = V.fromList . map readMonkey . splitOn [""] . BS.lines
@@ -66,7 +51,7 @@ readMonkey
     ] =
     Monkey
       { number = readIntPartial $ BS.drop 7 numLine,
-        items = Identity $ V.fromList $ map (fromIntegral . readIntPartial) $ BS.splitWith (== ' ') $ BS.drop 18 itemsLine,
+        items = V.fromList $ map (fromIntegral . readIntPartial) $ BS.splitWith (== ' ') $ BS.drop 18 itemsLine,
         operation = operation,
         test = \n -> if n `mod` testModulo == 0 then ifTrueTarget else ifFalseTarget,
         testModulo = testModulo,
@@ -94,7 +79,7 @@ runMonkeyPart1 Monkey {items, operation, test} =
         let newWorryVal = operation worryVal `div` 3
          in (test newWorryVal, newWorryVal)
     )
-    (runIdentity items)
+    items
 
 -- The critical insight here is that all arithmetic can be done modulo the
 -- product of all the moduli used for the monkeys' tests
@@ -105,33 +90,57 @@ runMonkeyPart2 modulo Monkey {items, operation, test} =
         let newWorryVal = operation worryVal `mod` modulo
          in (test newWorryVal, newWorryVal)
     )
-    (runIdentity items)
+    items
 
-runRound :: (Monkey -> Vector (MonkeyId, WorryValue)) -> Vector (MutMonkey s) -> ST s ()
-runRound runMonkey monkeys = do
-  V.forM_ monkeys $ \monkey -> do
-    thrownItems <- runMonkey <$> freeze monkey
-    writeSTRef (items monkey) V.empty
-    modifySTRef (itemsInspected monkey) (+ V.length thrownItems)
-    V.forM_ thrownItems $ \(toMonkeyIdx, worryValue) ->
-      modifySTRef (items (monkeys V.! toMonkeyIdx)) (`V.snoc` worryValue)
+giveItem :: WorryValue -> Monkey -> Monkey
+giveItem x Monkey {items, itemsInspected, ..} = Monkey {items = V.snoc items x, ..}
+
+removeAllItems :: Monkey -> Monkey
+removeAllItems Monkey {..} = Monkey {items = V.empty, ..}
+
+addItemsInspected :: Int -> Monkey -> Monkey
+addItemsInspected n Monkey {itemsInspected, ..} = Monkey {itemsInspected = itemsInspected + n, ..}
+
+adjust :: Int -> (a -> a) -> Vector a -> Vector a
+adjust idx f v = V.accumulate (\x _ -> f x) v (V.singleton (idx, ()))
+
+runRound :: (Monkey -> Vector (MonkeyId, WorryValue)) -> Vector Monkey -> Vector Monkey
+runRound runMonkey = go 0
+  where
+    go idx monkeys
+      | idx >= V.length monkeys = monkeys
+      | otherwise =
+          let thrownItems = runMonkey (monkeys V.! idx)
+           in go
+                (idx + 1)
+                ( adjust idx (addItemsInspected (V.length thrownItems) . removeAllItems) $
+                    V.accumulate (flip giveItem) monkeys thrownItems
+                )
 
 part1 :: ByteString -> Int
-part1 input = product $ take 2 $ reverse $ sort $ V.toList $ V.map (runIdentity . itemsInspected) finalMonkeys
-  where
-    initialMonkeys = readInput input
-    finalMonkeys = runST $ do
-      monkeysMut <- V.mapM thaw initialMonkeys
-      replicateM_ 20 (runRound runMonkeyPart1 monkeysMut)
-      V.mapM freeze monkeysMut
+part1 =
+  product
+    . take 2
+    . reverse
+    . sort
+    . V.toList
+    . V.map itemsInspected
+    . (!! 20)
+    . iterate (runRound runMonkeyPart1)
+    . readInput
 
 part2 :: ByteString -> Int
-part2 input = product $ take 2 $ reverse $ sort $ V.toList $ V.map (runIdentity . itemsInspected) finalMonkeys
+part2 input = solution monkeys
   where
-    initialMonkeys = readInput input
-    modulo = product $ map testModulo $ V.toList initialMonkeys
+    solution =
+      product
+        . take 2
+        . reverse
+        . sort
+        . V.toList
+        . V.map itemsInspected
+        . (!! 10000)
+        . iterate' (runRound (runMonkeyPart2 modulo))
 
-    finalMonkeys = runST $ do
-      monkeysMut <- V.mapM thaw initialMonkeys
-      replicateM_ 10000 (runRound (runMonkeyPart2 modulo) monkeysMut)
-      V.mapM freeze monkeysMut
+    monkeys = readInput input
+    modulo = product $ map testModulo $ V.toList monkeys
