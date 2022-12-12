@@ -7,9 +7,10 @@ import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Char (chr, ord)
+import Data.Function ((&))
 import Data.Maybe (fromJust, fromMaybe)
 import Debug.Trace (traceShow, traceShowId)
-import Optics (Ixed (ix), over)
+import Optics (Field1 (..), Ixed (ix), over, (%), (%~), (.~))
 import Safe (fromJustNote)
 import Util.Grid (Grid)
 import Util.Grid qualified as G
@@ -48,36 +49,38 @@ findStart = fromJustNote "No start coordinates" . G.findCoordinates (== Start)
 findEnd :: Grid Position -> G.Coordinates
 findEnd = fromJustNote "No start coordinates" . G.findCoordinates (== End)
 
--- | Set the distances for reaching a position in the grid from the start
+-- | Set the distances to every position on the grid from a starting position
 findDistances :: G.Coordinates -> Int -> Grid (Maybe Int, Position) -> Grid (Maybe Int, Position)
-findDistances c distanceCovered g = case g G.!? c of
-  Just (Nothing, currentPos) -> proceed currentPos g
-  Just (Just bestDistance, currentPos)
-    | bestDistance <= distanceCovered -> g
-    | otherwise -> proceed currentPos g
+findDistances c distanceCovered g
+  | shouldUpdate =
+      g
+        & ix c % Optics._1 .~ Just distanceCovered
+        & continue (G.west c)
+        & continue (G.north c)
+        & continue (G.east c)
+        & continue (G.south c)
+  | otherwise = g
   where
-    proceed currentPos =
-      (if shouldProceed (G.west c) then findDistances (G.west c) (distanceCovered + 1) else id)
-        . (if shouldProceed (G.north c) then findDistances (G.north c) (distanceCovered + 1) else id)
-        . (if shouldProceed (G.east c) then findDistances (G.east c) (distanceCovered + 1) else id)
-        . (if shouldProceed (G.south c) then findDistances (G.south c) (distanceCovered + 1) else id)
-        -- Update this position
-        . over
-          (ix c)
-          ( \(minDistance, p) ->
-              (Just (maybe distanceCovered (min distanceCovered) minDistance), p)
-          )
-      where
-        shouldProceed nextC = case g G.!? nextC of
-          Just (_, nextPos) ->
-            height nextPos <= height currentPos + 1
-          _ -> False
+    (mBestDistance, currentPos) = g G.! c
+
+    continue c'
+      | shouldContinueTo c' = findDistances c' (distanceCovered + 1)
+      | otherwise = id
+
+    shouldUpdate = case mBestDistance of
+      Just bestDistance -> distanceCovered < bestDistance
+      Nothing -> True
+
+    shouldContinueTo c' = case g G.!? c' of
+      Just (_, nextPos) -> height nextPos <= height currentPos + 1
+      _ -> False
 
 part1 :: ByteString -> Int
 part1 input =
   fromJustNote "End not reached" $
     fst $
-      fromJustNote "End is out of bounds"
+      fromJustNote
+        "End is out of bounds"
         (finalGrid G.!? endCoords)
   where
     startCoords = findStart inputGrid

@@ -3,3 +3,4 @@
 ##########################
 
 - ignore: { name: Use map once }
+- ignore: { name: Use ?~ }
