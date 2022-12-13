@@ -37,7 +37,6 @@ library
       , Day10
       , Day11
       , Day12
-      , Util.Grid
 
 executable aoc22
     import: opts
