@@ -1,54 +1,64 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 module Day12 (part1, part2) where
 
-import Control.DeepSeq (NFData)
 import Control.Monad (forM_, when)
 import Control.Monad.ST (ST, runST)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
-import Data.Char (chr, ord)
+import Data.Char (ord)
 import Data.Function ((&))
 import Data.Massiv.Array (Ix2 ((:.)))
 import Data.Massiv.Array qualified as M
-import GHC.Generics (Generic)
 import Safe (fromJustNote)
 
-type Grid a = M.Array M.BN M.Ix2 a
+type Grid a = M.Array M.P M.Ix2 a
 
-type MGrid s a = M.MArray s M.BN M.Ix2 a
+type MGrid s a = M.MArray s M.P M.Ix2 a
 
 type Coordinates = M.Ix2
 
-data Tile
-  = Start
-  | End
-  | Height {-# UNPACK #-} !Int
-  deriving (Eq, Generic, NFData)
+-- | Tile is represented as a plain Int so that we can put it in a primitive
+-- vector. Access using the Start, End, Height patterns to make sure we don't
+-- miss any of the special values for Start and End
+newtype Tile = Tile Int
+  deriving newtype (Eq, M.Prim)
 
-instance Show Tile where
-  show Start = "S"
-  show End = "E"
-  show (Height h) = [chr h]
+pattern Start :: Tile
+pattern Start = Tile (-1)
+
+pattern End :: Tile
+pattern End = Tile (-2)
+
+pattern Height :: Int -> Tile
+pattern Height n = (Tile n)
+
+{-# COMPLETE Start, End, Height #-}
 
 height :: Tile -> Int
 height Start = ord 'a'
 height End = ord 'z'
-height (Height h) = h
+height (Height n) = n
 
-positionFromChar :: Char -> Tile
-positionFromChar 'S' = Start
-positionFromChar 'E' = End
-positionFromChar c = Height (ord c)
+tileFromChar :: Char -> Tile
+tileFromChar 'S' = Start
+tileFromChar 'E' = End
+tileFromChar c = Height (ord c)
 
 readInput :: ByteString -> Grid Tile
 readInput =
   M.fromLists' M.Seq
-    . map (map positionFromChar)
+    . map (map tileFromChar)
     . map BS.unpack
     . BS.lines
 
