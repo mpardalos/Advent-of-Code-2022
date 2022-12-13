@@ -3,14 +3,12 @@
 
 module Day12 (part1, part2) where
 
-import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Char (chr, ord)
 import Data.Function ((&))
-import Data.Maybe (fromJust, fromMaybe)
-import Debug.Trace (traceShow, traceShowId)
-import Optics (Field1 (..), Ixed (ix), over, (%), (%~), (.~))
+import Data.Vector qualified as V
+import Optics (Field1 (..), Ixed (ix), (%), (.~))
 import Safe (fromJustNote)
 import Util.Grid (Grid)
 import Util.Grid qualified as G
@@ -50,8 +48,8 @@ findEnd :: Grid Position -> G.Coordinates
 findEnd = fromJustNote "No start coordinates" . G.findCoordinates (== End)
 
 -- | Set the distances to every position on the grid from a starting position
-findDistances :: G.Coordinates -> Int -> Grid (Maybe Int, Position) -> Grid (Maybe Int, Position)
-findDistances c distanceCovered g
+findDistances :: (Int -> Int -> Bool) -> G.Coordinates -> Int -> Grid (Maybe Int, Position) -> Grid (Maybe Int, Position)
+findDistances canReach c distanceCovered g
   | shouldUpdate =
       g
         & ix c % Optics._1 .~ Just distanceCovered
@@ -64,7 +62,7 @@ findDistances c distanceCovered g
     (mBestDistance, currentPos) = g G.! c
 
     continue c'
-      | shouldContinueTo c' = findDistances c' (distanceCovered + 1)
+      | shouldContinueTo c' = findDistances canReach c' (distanceCovered + 1)
       | otherwise = id
 
     shouldUpdate = case mBestDistance of
@@ -72,23 +70,32 @@ findDistances c distanceCovered g
       Nothing -> True
 
     shouldContinueTo c' = case g G.!? c' of
-      Just (_, nextPos) -> height nextPos <= height currentPos + 1
+      Just (_, nextPos) -> canReach (height currentPos) (height nextPos)
       _ -> False
 
 part1 :: ByteString -> Int
 part1 input =
-  fromJustNote "End not reached" $
-    fst $
-      fromJustNote
-        "End is out of bounds"
-        (finalGrid G.!? endCoords)
+  inputGrid
+    & fmap (Nothing,)
+    & findDistances (\from to -> to <= from + 1) startCoords 0
+    & (G.!? endCoords)
+    & fromJustNote "End is out of bounds"
+    & fst
+    & fromJustNote "End not reached"
   where
     startCoords = findStart inputGrid
     endCoords = findEnd inputGrid
-
     inputGrid = readInput input
-    startGrid = fmap (Nothing,) inputGrid
-    finalGrid = findDistances startCoords 0 startGrid
 
 part2 :: ByteString -> Int
-part2 = const 0
+part2 input =
+  inputGrid
+    & fmap (Nothing,)
+    & findDistances (\from to -> to >= from - 1) endCoords 0
+    & G.contents
+    & V.filter (\(_, pos) -> height pos == ord 'a')
+    & V.mapMaybe fst
+    & V.minimum
+  where
+    inputGrid = readInput input
+    endCoords = findEnd inputGrid

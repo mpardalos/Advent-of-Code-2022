@@ -53,6 +53,6 @@ solutions =
     MkSolution "Day 10 part 2" Day10.part2 "day10",
     MkSolution "Day 11 part 1" Day11.part1 "day11",
     MkSolution "Day 11 part 2" Day11.part2 "day11",
-    MkSolution "Day 12 part 1" Day12.part1 "day12"
-    -- MkSolution "Day 12 part 2" Day12.part2 "day12"
+    MkSolution "Day 12 part 1" Day12.part1 "day12",
+    MkSolution "Day 12 part 2" Day12.part2 "day12"
   ]
