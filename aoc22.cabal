@@ -21,6 +21,7 @@ library
       , matrix
       , optics
       , optics-th
+      , massiv
     hs-source-dirs: solutions
     exposed-modules:  Solutions
     other-modules:

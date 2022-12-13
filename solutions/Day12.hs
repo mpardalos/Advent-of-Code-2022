@@ -1,23 +1,33 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Day12 (part1, part2) where
 
+import Control.DeepSeq (NFData)
+import Control.Monad (forM_, when)
+import Control.Monad.ST (ST)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Char (chr, ord)
 import Data.Function ((&))
-import Data.Vector qualified as V
-import Optics (Field1 (..), Ixed (ix), (%), (.~))
+import Data.Massiv.Array (Ix2 ((:.)))
+import Data.Massiv.Array qualified as M
+import GHC.Generics (Generic)
 import Safe (fromJustNote)
-import Util.Grid (Grid)
-import Util.Grid qualified as G
+
+type Grid a = M.Array M.BN M.Ix2 a
+
+type MGrid s a = M.MArray s M.BN M.Ix2 a
+
+type Coordinates = M.Ix2
 
 data Tile
   = Start
   | End
   | Height Int
-  deriving (Eq)
+  deriving (Eq, Generic, NFData)
 
 instance Show Tile where
   show Start = "S"
@@ -36,49 +46,45 @@ positionFromChar c = Height (ord c)
 
 readInput :: ByteString -> Grid Tile
 readInput =
-  G.fromListOfLists
+  M.fromLists' M.Seq
     . map (map positionFromChar)
     . map BS.unpack
     . BS.lines
 
-findStart :: Grid Tile -> G.Coordinates
-findStart = fromJustNote "No start coordinates" . G.findCoordinates (== Start)
+findStart :: Grid Tile -> Coordinates
+findStart = fromJustNote "No start coordinates" . M.findIndex (== Start)
 
-findEnd :: Grid Tile -> G.Coordinates
-findEnd = fromJustNote "No start coordinates" . G.findCoordinates (== End)
+findEnd :: Grid Tile -> Coordinates
+findEnd = fromJustNote "No start coordinates" . M.findIndex (== End)
 
 -- | Set the distances to every position on the grid from a starting position
-findDistances :: (Int -> Int -> Bool) -> G.Coordinates -> Int -> Grid (Maybe Int, Tile) -> Grid (Maybe Int, Tile)
-findDistances canReach c distanceCovered g
-  | shouldUpdate =
-      g
-        & ix c % Optics._1 .~ Just distanceCovered
-        & continue (G.west c)
-        & continue (G.north c)
-        & continue (G.east c)
-        & continue (G.south c)
-  | otherwise = g
-  where
-    (mBestDistance, currentPos) = g G.! c
+findDistancesST :: (Int -> Int -> Bool) -> Coordinates -> Int -> MGrid s (Maybe Int, Tile) -> ST s ()
+findDistancesST canReach c distanceCovered g = do
+  (mBestDistance, currentPos) <- M.readM g c
 
-    continue c'
-      | shouldContinueTo c' = findDistances canReach c' (distanceCovered + 1)
-      | otherwise = id
+  let shouldUpdate = case mBestDistance of
+        (Just bestDistance) -> distanceCovered < bestDistance
+        Nothing -> True
 
-    shouldUpdate = case mBestDistance of
-      Just bestDistance -> distanceCovered < bestDistance
-      Nothing -> True
+  when shouldUpdate $ do
+    M.modifyM_ g (\(_, p) -> pure (Just distanceCovered, p)) c
+    forM_ [c + (0 :. -1), c + (-1 :. 0), c + (0 :. 1), c + (1 :. 0)] $ \c' -> do
+      M.read g c' >>= \case
+        Nothing -> pure ()
+        Just (_, nextPos) ->
+          when (canReach (height currentPos) (height nextPos)) $
+            findDistancesST canReach c' (distanceCovered + 1) g
 
-    shouldContinueTo c' = case g G.!? c' of
-      Just (_, nextPos) -> canReach (height currentPos) (height nextPos)
-      _ -> False
+findDistances :: (Int -> Int -> Bool) -> Coordinates -> Int -> Grid (Maybe Int, Tile) -> Grid (Maybe Int, Tile)
+findDistances canReach c distanceCovered g = M.withMArrayST_ g (findDistancesST canReach c distanceCovered)
 
 part1 :: ByteString -> Int
 part1 input =
   inputGrid
-    & fmap (Nothing,)
+    & M.map (Nothing,)
+    & M.compute
     & findDistances (\from to -> to <= from + 1) startCoords 0
-    & (G.!? endCoords)
+    & (M.!? endCoords)
     & fromJustNote "End is out of bounds"
     & fst
     & fromJustNote "End not reached"
@@ -90,12 +96,13 @@ part1 input =
 part2 :: ByteString -> Int
 part2 input =
   inputGrid
-    & fmap (Nothing,)
+    & M.map (Nothing,)
+    & M.compute
     & findDistances (\from to -> to >= from - 1) endCoords 0
-    & G.contents
-    & V.filter (\(_, pos) -> height pos == ord 'a')
-    & V.mapMaybe fst
-    & V.minimum
+    & M.flatten
+    & M.sfilter (\(_, pos) -> height pos == ord 'a')
+    & M.smapMaybe fst
+    & M.sminimum'
   where
     inputGrid = readInput input
     endCoords = findEnd inputGrid
