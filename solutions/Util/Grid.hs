@@ -110,13 +110,16 @@ type instance IxValue (Grid a) = a
 instance Ixed (Grid a) where
   ix cs =
     atraversal
-      ( \g -> case g !? cs of
-          Just v -> Right v
-          Nothing -> Left g
+      ( \g ->
+          case g !? cs of
+            Just v -> Right v
+            Nothing -> Left g
       )
-      ( \g v -> case coordinatesToIndex g cs of
-          Just idx -> set (#contents % ix idx) v g
-          Nothing -> g
+      ( \g@Grid {contents} v ->
+          case coordinatesToIndex g cs of
+            -- Index has already been checked, so we can use unsafeUpd
+            Just idx -> g {contents = contents `V.unsafeUpd` [(idx, v)]}
+            Nothing -> g
       )
 
 row :: Int -> Lens' (Grid a) (Vector a)
