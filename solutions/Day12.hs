@@ -13,42 +13,42 @@ import Safe (fromJustNote)
 import Util.Grid (Grid)
 import Util.Grid qualified as G
 
-data Position
+data Tile
   = Start
   | End
   | Height Int
   deriving (Eq)
 
-instance Show Position where
+instance Show Tile where
   show Start = "S"
   show End = "E"
   show (Height h) = [chr h]
 
-height :: Position -> Int
+height :: Tile -> Int
 height Start = ord 'a'
 height End = ord 'z'
 height (Height h) = h
 
-positionFromChar :: Char -> Position
+positionFromChar :: Char -> Tile
 positionFromChar 'S' = Start
 positionFromChar 'E' = End
 positionFromChar c = Height (ord c)
 
-readInput :: ByteString -> Grid Position
+readInput :: ByteString -> Grid Tile
 readInput =
   G.fromListOfLists
     . map (map positionFromChar)
     . map BS.unpack
     . BS.lines
 
-findStart :: Grid Position -> G.Coordinates
+findStart :: Grid Tile -> G.Coordinates
 findStart = fromJustNote "No start coordinates" . G.findCoordinates (== Start)
 
-findEnd :: Grid Position -> G.Coordinates
+findEnd :: Grid Tile -> G.Coordinates
 findEnd = fromJustNote "No start coordinates" . G.findCoordinates (== End)
 
 -- | Set the distances to every position on the grid from a starting position
-findDistances :: (Int -> Int -> Bool) -> G.Coordinates -> Int -> Grid (Maybe Int, Position) -> Grid (Maybe Int, Position)
+findDistances :: (Int -> Int -> Bool) -> G.Coordinates -> Int -> Grid (Maybe Int, Tile) -> Grid (Maybe Int, Tile)
 findDistances canReach c distanceCovered g
   | shouldUpdate =
       g
