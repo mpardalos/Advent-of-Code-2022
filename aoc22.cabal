@@ -22,6 +22,7 @@ library
       , optics
       , optics-th
       , massiv
+      , attoparsec
     hs-source-dirs: solutions
     exposed-modules:  Solutions
     other-modules:
@@ -37,6 +38,7 @@ library
       , Day10
       , Day11
       , Day12
+      , Day13
 
 executable aoc22
     import: opts
