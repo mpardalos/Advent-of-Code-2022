@@ -94,7 +94,6 @@ findDistances canReach c distanceCovered heights = runST $ do
 part1 :: ByteString -> Int
 part1 input =
   inputGrid
-    & M.compute
     & findDistances (\from to -> to <= from + 1) startCoords 0
     & (M.!? endCoords)
     & fromJustNote "End is out of bounds"
@@ -106,7 +105,6 @@ part1 input =
 part2 :: ByteString -> Int
 part2 input =
   inputGrid
-    & M.compute
     & findDistances (\from to -> to >= from - 1) endCoords 0
     & M.zip inputGrid
     & M.flatten
