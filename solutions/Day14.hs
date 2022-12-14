@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -58,43 +59,57 @@ displayGrid =
     )
     ""
 
+rollDownFrom :: forall s. MGrid s Bool -> Ix2 -> ST s Ix2
+rollDownFrom grid (row :. col)
+  | not (M.isSafeIndex (M.sizeOfMArray grid) (row :. col)) =
+      return (row :. col)
+  | otherwise = do
+      let down = (row + 1 :. col)
+      let downLeft = (row + 1 :. col - 1)
+      let downRight = (row + 1 :. col + 1)
+
+      downOccupied <- fromMaybe True <$> M.read grid down
+      downLeftOccupied <- fromMaybe True <$> M.read grid downLeft
+      downRightOccupied <- fromMaybe True <$> M.read grid downRight
+
+      if not downOccupied
+        then rollDownFrom grid down
+        else
+          if not downLeftOccupied
+            then rollDownFrom grid downLeft
+            else
+              if not downRightOccupied
+                then rollDownFrom grid downRight
+                else return (row :. col)
+
 sandUntilSpill :: Int -> Grid Bool -> Int
 sandUntilSpill entryColumn initialGrid = runST $ do
   mgrid <- M.thawS initialGrid
   go 0 mgrid
   where
-    rollDownFrom :: forall s. MGrid s Bool -> Ix2 -> ST s Ix2
-    rollDownFrom grid (row :. col)
-      | not (M.isSafeIndex (M.sizeOfMArray grid) (row :. col)) =
-          return (row :. col)
-      | otherwise = do
-          let down = (row + 1 :. col)
-          let downLeft = (row + 1 :. col - 1)
-          let downRight = (row + 1 :. col + 1)
-
-          downOccupied <- fromMaybe False <$> M.read grid down
-          downLeftOccupied <- fromMaybe False <$> M.read grid downLeft
-          downRightOccupied <- fromMaybe False <$> M.read grid downRight
-
-          if not downOccupied
-            then rollDownFrom grid down
-            else
-              if not downLeftOccupied
-                then rollDownFrom grid downLeft
-                else
-                  if not downRightOccupied
-                    then rollDownFrom grid downRight
-                    else return (row :. col)
+    bottomRow = let (M.Sz2 rows _) = M.size initialGrid in rows - 1
 
     go :: forall s. Int -> MGrid s Bool -> ST s Int
     go counter grid = do
-      -- landingIdx <- nextLanding grid
-      stopIdx <- rollDownFrom grid (0 :. entryColumn)
-      if M.isSafeIndex (M.sizeOfMArray grid) stopIdx
-        then do
+      stopIdx@(stopRow :. _) <- rollDownFrom grid (0 :. entryColumn)
+      if stopRow >= bottomRow
+        then return counter
+        else do
           M.write_ grid stopIdx True
           go (counter + 1) grid
-        else return counter
+
+sandUntilFull :: Int -> Grid Bool -> Int
+sandUntilFull entryColumn initialGrid = runST $ do
+  mgrid <- M.thawS initialGrid
+  go 0 mgrid
+  where
+    go :: forall s. Int -> MGrid s Bool -> ST s Int
+    go counter grid = do
+      stopIdx@(stopRow :. _) <- rollDownFrom grid (0 :. entryColumn)
+      M.write_ grid stopIdx True
+      if stopRow <= 0
+        then return (counter + 1)
+        else go (counter + 1) grid
 
 part1 :: ByteString -> Int
 part1 input =
@@ -113,4 +128,16 @@ part1 input =
     maxRow = maximum [row | (row :. _) <- concat instructions] + 1
 
 part2 :: ByteString -> Int
-part2 = const 0
+part2 input =
+  instructions
+    & map (map (\(row :. col) -> (row :. col - minColumn)))
+    & foldl' (flip makeLine) (M.replicate M.Par (M.Sz (rows :. columns)) False)
+    & sandUntilFull (500 - minColumn)
+  where
+    instructions = map readLine (BS.lines input)
+    columns = maxColumn - minColumn + 1
+    rows = maxRow + 1
+
+    minColumn = 500 - maxRow - 1
+    maxColumn = 500 + maxRow + 1
+    maxRow = maximum [row | (row :. _) <- concat instructions] + 1
