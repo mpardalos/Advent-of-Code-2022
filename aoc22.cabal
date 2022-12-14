@@ -39,6 +39,7 @@ library
       , Day11
       , Day12
       , Day13
+      , Day14
 
 executable aoc22
     import: opts
@@ -47,6 +48,7 @@ executable aoc22
       , aoc22
       , bytestring
     main-is: Main.hs
+    ghc-options: -threaded -with-rtsopts=-N
 
 benchmark bench
     import: opts
@@ -58,3 +60,4 @@ benchmark bench
       , bytestring
       , containers
     main-is: Benchmark.hs
+    ghc-options: -threaded -with-rtsopts=-N
