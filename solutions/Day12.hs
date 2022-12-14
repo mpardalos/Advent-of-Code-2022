@@ -69,24 +69,23 @@ findEnd :: Grid Tile -> Coordinates
 findEnd = fromJustNote "No start coordinates" . M.findIndex (== End)
 
 -- | Set the distances to every position on the grid from a starting position
+-- TODO: This seems to allocate a lot for the recursive calls. Shouldn't everything be passed boxed
 findDistancesST :: (Int -> Int -> Bool) -> Coordinates -> Int -> Grid Tile -> MGrid s Int -> ST s ()
-findDistancesST canReach c !distanceCovered heights distances = do
-  bestDistance <- M.readM distances c
+findDistancesST canReach !c !distanceCovered !heights !distances = do
+  !bestDistance <- M.readM distances c
 
-  let shouldUpdate = bestDistance < 0 || distanceCovered < bestDistance
-  when shouldUpdate $ do
+  when (bestDistance < 0 || distanceCovered < bestDistance) $ do
     M.write_ distances c distanceCovered
-    forM_ [c + (0 :. -1), c + (-1 :. 0), c + (0 :. 1), c + (1 :. 0)] $ \c' -> do
+    forM_ [c + (0 :. -1), c + (-1 :. 0), c + (0 :. 1), c + (1 :. 0)] $ \ !c' -> do
       case heights M.!? c' of
         Nothing -> pure ()
         Just !nextHeight -> do
-          let currentHeight = heights M.! c
-          if canReach (height currentHeight) (height nextHeight)
-            then findDistancesST canReach c' (distanceCovered + 1) heights distances
-            else pure ()
+          let !currentHeight = heights M.! c
+          when (canReach (height currentHeight) (height nextHeight)) $
+            findDistancesST canReach c' (distanceCovered + 1) heights distances
 
 findDistances :: (Int -> Int -> Bool) -> Coordinates -> Int -> Grid Tile -> Grid Int
-findDistances canReach c distanceCovered heights = runST $ do
+findDistances canReach !c !distanceCovered !heights = runST $ do
   distances <- M.newMArray (M.size heights) (-1)
   findDistancesST canReach c distanceCovered heights distances
   M.freezeS distances
