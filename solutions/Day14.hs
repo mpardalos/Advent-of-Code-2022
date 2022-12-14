@@ -108,9 +108,9 @@ part1 input =
     rows = maxRow + 1
 
     -- Add 1 column of margin so we can allow sand to fall off the edges
-    minColumn = minimum [col | (_ :. col) <- concat instructions] - 20
-    maxColumn = maximum [col | (_ :. col) <- concat instructions] + 20
-    maxRow = maximum [row | (row :. _) <- concat instructions] + 2
+    minColumn = minimum [col | (_ :. col) <- concat instructions] - 1
+    maxColumn = maximum [col | (_ :. col) <- concat instructions] + 1
+    maxRow = maximum [row | (row :. _) <- concat instructions] + 1
 
 part2 :: ByteString -> Int
 part2 = const 0
