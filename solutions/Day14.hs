@@ -48,13 +48,13 @@ indicesInLine (row1 :. col1) (row2 :. col2)
   | col1 == col2 = [row :. col1 | row <- [min row1 row2 .. max row1 row2]]
   | otherwise = error "Diagonal line"
 
-displayGrid :: Grid Bool -> String
+displayGrid :: Grid Bool -> ByteString
 displayGrid =
   M.ifoldSemi
     ( \(_ :. !col) !v ->
         if
-            | col == 0 -> "\n" ++ bool "." "█" v
-            | otherwise -> bool "." "█" v
+            | col == 0 -> "\n" <> bool "." "#" v
+            | otherwise -> bool "." "#" v
     )
     ""
 
