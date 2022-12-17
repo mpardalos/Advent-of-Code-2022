@@ -10,6 +10,7 @@ import Day11 (part1, part2)
 import Day12 (part1, part2)
 import Day13 (part1, part2)
 import Day14 (part1, part2)
+import Day16 (part1, part2)
 import Day2 (part1, part2)
 import Day3 (part1, part2)
 import Day4 (part1, part2)
@@ -60,5 +61,7 @@ solutions =
     MkSolution "Day 13 part 1" Day13.part1 "day13",
     MkSolution "Day 13 part 2" Day13.part2 "day13",
     MkSolution "Day 14 part 1" Day14.part1 "day14",
-    MkSolution "Day 14 part 2" Day14.part2 "day14"
+    MkSolution "Day 14 part 2" Day14.part2 "day14",
+    MkSolution "Day 16 part 1" Day16.part1 "day16",
+    MkSolution "Day 16 part 2" Day16.part2 "day16"
   ]
