@@ -21,12 +21,12 @@ parseLine = parseOrError $ do
 
 neighbours :: Coordinates -> [Coordinates]
 neighbours (x, y, z) =
-  [ (x + 1, y, z)
-  , (x - 1, y, z)
-  , (x, y + 1, z)
-  , (x, y - 1, z)
-  , (x, y, z + 1)
-  , (x, y, z - 1)
+  [ (x + 1, y, z),
+    (x - 1, y, z),
+    (x, y + 1, z),
+    (x, y - 1, z),
+    (x, y, z + 1),
+    (x, y, z - 1)
   ]
 
 countExposedFaces :: Set Coordinates -> Int
@@ -41,5 +41,41 @@ part1 input =
     & Set.fromList
     & countExposedFaces
 
+findOpenAir ::
+  -- | Lava block coordinates
+  Set Coordinates ->
+  -- | Air coordinates
+  Set Coordinates
+findOpenAir lavaBlocks = go (-1, -1, -1) Set.empty
+  where
+    go (x, y, z) airBlocks
+      | (x, y, z) `Set.member` lavaBlocks
+          || (x, y, z) `Set.member` airBlocks
+          || x < -1
+          || x > 20
+          || y < -1
+          || y > 20
+          || z < -1
+          || z > 20 =
+          airBlocks
+      | otherwise =
+          Set.insert (x, y, z) airBlocks
+            & go (x - 1, y, z)
+            & go (x + 1, y, z)
+            & go (x, y - 1, z)
+            & go (x, y + 1, z)
+            & go (x, y, z - 1)
+            & go (x, y, z + 1)
+
+countExternalFaces :: Set Coordinates -> Int
+countExternalFaces blocks = Set.foldl go 0 blocks
+  where
+    openAir = findOpenAir blocks
+    go acc coords = acc + (length $ filter (`Set.member` openAir) $ neighbours coords)
+
 part2 :: ByteString -> Int
-part2 = const 0
+part2 input =
+  BS.lines input
+    & map parseLine
+    & Set.fromList
+    & countExternalFaces
