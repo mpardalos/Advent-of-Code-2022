@@ -1,5 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MultiWayIf #-}
--- {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -10,20 +11,19 @@ import Data.Attoparsec.ByteString.Char8 qualified as P
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Function ((&))
-import Data.List (nub)
-import Data.Set qualified as Set
-import Data.Vector (Vector)
-import Data.Vector qualified as V
+import Data.HashSet qualified as HashSet
+import Data.Hashable
 import Debug.Trace
+import GHC.Generics (Generic)
 import Util
 
 {-
 
-  +-<-+   +---------------------+
- /     \ /                       \
-+- ore -+------------+- obsidian -+ geode
-         \          /
-          +- clay -+
+  +-<-+       +---------------------+
+ /     \     /                       \
++- ore -+->-+------------+- obsidian -+ geode
+             \          /
+              +- clay -+
 
 ore robots need ore
 clay robots need ore
@@ -73,7 +73,7 @@ data State = State
     obsidianRobots :: Int,
     geodeRobots :: Int
   }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic, Hashable)
 
 initialState :: State
 initialState =
@@ -113,19 +113,13 @@ step Blueprint {..} State {..} = do
                 [Nothing]
               ]
 
-  let oreRobotsMade = case robotToMake of
-        Just Ore -> 1
-        _ -> 0
-  let clayRobotsMade = case robotToMake of
-        Just Clay -> 1
-        _ -> 0
-  let obsidianRobotsMade = case robotToMake of
-        Just Obsidian -> 1
-        _ -> 0
-  let geodeRobotsMade = case robotToMake of
-        Just Geode -> 1
-        _ -> 0
+  let oreRobotsMade = case robotToMake of Just Ore -> 1; _ -> 0
+  let clayRobotsMade = case robotToMake of Just Clay -> 1; _ -> 0
+  let obsidianRobotsMade = case robotToMake of Just Obsidian -> 1; _ -> 0
+  let geodeRobotsMade = case robotToMake of Just Geode -> 1; _ -> 0
 
+  let claySpent = case robotToMake of Just Obsidian -> obsidianRobotClayCost; _ -> 0
+  let obsidianSpent = case robotToMake of Just Geode -> geodeRobotObsidianCost; _ -> 0
   let oreSpent = case robotToMake of
         Just Ore -> oreRobotOreCost
         Just Clay -> clayRobotOreCost
@@ -133,13 +127,6 @@ step Blueprint {..} State {..} = do
         Just Geode -> geodeRobotOreCost
         Nothing -> 0
 
-  let claySpent = case robotToMake of
-        Just Obsidian -> obsidianRobotClayCost
-        _ -> 0
-
-  let obsidianSpent = case robotToMake of
-        Just Geode -> geodeRobotObsidianCost
-        _ -> 0
   return
     State
       { minute = minute + 1,
@@ -153,20 +140,22 @@ step Blueprint {..} State {..} = do
         geodeRobots = geodeRobots + geodeRobotsMade
       }
 
-qualityLevel :: Blueprint -> Int
-qualityLevel blueprint = blueprintId blueprint * maximum (fmap geodes finalStates)
-  where
-    finalStates :: [State]
-    finalStates = iterate (setNub . concatMap (step blueprint)) [initialState] !! 24 -- ((iterate' _ initialState) !! 25)
+hashNub :: Hashable a => [a] -> [a]
+hashNub = HashSet.toList . HashSet.fromList
 
-setNub :: Ord a => [a] -> [a]
-setNub = Set.toList . Set.fromList
+qualityLevel :: Blueprint -> Int
+qualityLevel blueprint =
+  iterate (hashNub . concatMap (step blueprint)) [initialState]
+    & (!! 24)
+    & fmap geodes
+    & maximum
+    & (* blueprintId blueprint)
 
 part1 :: ByteString -> Int
 part1 input =
   BS.lines input
     & map parseLine
-    & map (traceShowId . qualityLevel)
+    & map qualityLevel
     & sum
 
 part2 :: ByteString -> Int

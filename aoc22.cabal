@@ -14,6 +14,7 @@ library
         base
       , safe
       , containers
+      , unordered-containers
       , split
       , deepseq
       , bytestring
@@ -23,6 +24,7 @@ library
       , optics-th
       , massiv
       , attoparsec
+      , hashable
     hs-source-dirs: solutions
     exposed-modules:  Solutions
     other-modules:
