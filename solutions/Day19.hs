@@ -11,9 +11,7 @@ import Data.Attoparsec.ByteString.Char8 qualified as P
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Function ((&))
-import Data.HashSet qualified as HashSet
 import Data.Hashable
-import Debug.Trace
 import GHC.Generics (Generic)
 import Util
 
@@ -140,23 +138,30 @@ step Blueprint {..} State {..} = do
         geodeRobots = geodeRobots + geodeRobotsMade
       }
 
-hashNub :: Hashable a => [a] -> [a]
-hashNub = HashSet.toList . HashSet.fromList
-
-qualityLevel :: Blueprint -> Int
-qualityLevel blueprint =
-  iterate (hashNub . concatMap (step blueprint)) [initialState]
-    & (!! 24)
-    & fmap geodes
-    & maximum
-    & (* blueprintId blueprint)
-
 part1 :: ByteString -> Int
 part1 input =
   BS.lines input
     & map parseLine
-    & map qualityLevel
+    & map
+      ( \blueprint ->
+          iterate (ordNub . concatMap (step blueprint)) [initialState]
+            & (!! 24)
+            & fmap geodes
+            & maximum
+            & (* blueprintId blueprint)
+      )
     & sum
 
 part2 :: ByteString -> Int
-part2 = const 0
+part2 input =
+  BS.lines input
+    & map parseLine
+    & take 3
+    & map
+      ( \blueprint ->
+          iterate (hashNub . concatMap (step blueprint)) [initialState]
+            & (!! 32)
+            & fmap geodes
+            & maximum
+      )
+    & product

@@ -72,5 +72,5 @@ solutions =
     MkSolution "Day 18 part 1" Day18.part1 "day18",
     MkSolution "Day 18 part 2" Day18.part2 "day18",
     MkSolution "Day 19 part 1" Day19.part1 "day19",
-    MkSolution "Day 19 part 2" Day19.part2 "day19"
+    MkSolution "Day 19 part 1" Day19.part2 "day19"
   ]
