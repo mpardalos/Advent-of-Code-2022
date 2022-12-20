@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
@@ -7,6 +8,7 @@ import Control.Exception (SomeException, catch, evaluate)
 import Control.Monad (forM_)
 import Data.ByteString.Char8 qualified as BS
 import Solutions (DisplaySolution (displaySolution), Solution (..), solutions)
+import System.Clock
 import Text.Printf (printf)
 
 titleLength :: Int
@@ -19,31 +21,51 @@ titleLength =
 printTableAnchor :: Bool -> IO ()
 printTableAnchor top =
   printf
-    "%s─%s─%s───────────\n"
+    "%s─%s─%s────────%s───────────\n"
     (if top then "┌" else "└")
     (replicate titleLength '─')
-    (if top then "┬" else "┴")
+    lineT
+    lineT
+  where
+    lineT = if top then "┬" else "┴"
 
-printLine :: String -> String -> IO ()
-printLine name answer =
+printLine :: String -> TimeSpec -> String -> IO ()
+printLine name time answer =
   printf
-    "│ %*s │ %s \n"
+    "│ %*s │ %6s │ %s \n"
     titleLength
     name
+    formattedTime
     -- If the answer spans multiple lines, align it all in the right column of the table
     ( concatMap
         ( \case
-            '\n' -> printf "\n│ %*s │ " titleLength ""
+            '\n' -> printf "\n│ %*s │        │ " titleLength ""
             c -> [c]
         )
         answer
     )
+  where
+    timeNanos :: Integer
+    timeNanos = toNanoSecs time
+
+    formattedTime :: String
+    formattedTime
+      | timeNanos < 1e3 = printf "%d ns" timeNanos
+      | timeNanos < 1e6 = printf "%d μs" (timeNanos `div` 1e3)
+      | timeNanos < 1e9 = printf "%d ms" (timeNanos `div` 1e6)
+      | otherwise = printf "%d  s" (timeNanos `div` 1e9)
 
 main :: IO ()
 main = do
   printTableAnchor True
   forM_ solutions $ \(MkSolution name solution inputFile) -> do
     input <- BS.readFile ("data/" <> inputFile)
-    answer <- evaluate (displaySolution $ solution input) `catch` \(e :: SomeException) -> pure (show e)
-    printLine name answer
+
+    startTime <- getTime Monotonic
+    answer <-
+      evaluate (displaySolution $ solution input)
+        `catch` \(e :: SomeException) -> pure (show e)
+    timeElapsed <- diffTimeSpec startTime <$> getTime Monotonic
+
+    printLine name timeElapsed answer
   printTableAnchor False

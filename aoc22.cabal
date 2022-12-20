@@ -54,6 +54,7 @@ executable aoc22
         base
       , aoc22
       , bytestring
+      , clock
     main-is: Main.hs
     ghc-options: -threaded -with-rtsopts=-N
 
