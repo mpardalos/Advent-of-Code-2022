@@ -7,8 +7,11 @@ module Main where
 import Control.Exception (SomeException, catch, evaluate)
 import Control.Monad (forM_)
 import Data.ByteString.Char8 qualified as BS
+import Data.List (isInfixOf)
 import Solutions (DisplaySolution (displaySolution), Solution (..), solutions)
 import System.Clock
+import System.Environment (getArgs)
+import System.Exit (exitFailure)
 import Text.Printf (printf)
 
 titleLength :: Int
@@ -57,8 +60,17 @@ printLine name time answer =
 
 main :: IO ()
 main = do
+  filterFun <-
+    getArgs >>= \case
+      [] -> return id
+      [filterString] -> return $ filter $ \(MkSolution name _ _) ->
+        filterString `isInfixOf` name
+      _ -> putStrLn "Too many arguments" >> exitFailure
+
+  let filteredSolutions = filterFun solutions
+
   printTableAnchor True
-  forM_ solutions $ \(MkSolution name solution inputFile) -> do
+  forM_ filteredSolutions $ \(MkSolution name solution inputFile) -> do
     input <- BS.readFile ("data/" <> inputFile)
 
     startTime <- getTime Monotonic
