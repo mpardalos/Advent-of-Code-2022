@@ -18,8 +18,6 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Map (Map, (!))
 import Data.Map qualified as Map
-import Data.Maybe (fromJust)
-import Debug.Trace
 import Util (parseOrError)
 
 type Name = ByteString
@@ -91,6 +89,8 @@ pattern a :-: b = SOperation a Sub b
 
 pattern a :/: b = SOperation a Div b
 
+{-# COMPLETE Unknown, Concrete, (:+:), (:*:), (:-:), (:/:) #-}
+
 formSymbolicExpressions :: [(Name, Expression)] -> Env SymbolicExpression
 formSymbolicExpressions expressionList =
   let env =
@@ -112,26 +112,20 @@ simplify (SOperation l op r) =
     (Concrete lv, _, Concrete rv) -> Concrete (evalOp op lv rv)
     (l', _, r') -> SOperation l' op r'
 
-solve :: SymbolicExpression -> SymbolicExpression -> Maybe Int
--- a # b == C
-solve (l :+: (Concrete x)) (Concrete y) = l `solve` Concrete (y - x)
-solve ((Concrete x) :+: r) (Concrete y) = r `solve` Concrete (y - x)
-solve (l :-: (Concrete x)) (Concrete y) = l `solve` Concrete (y + x)
-solve ((Concrete x) :-: r) (Concrete y) = r `solve` Concrete (x - y)
-solve (l :*: (Concrete x)) (Concrete y) = l `solve` Concrete (y `div` x)
-solve ((Concrete x) :*: r) (Concrete y) = r `solve` Concrete (y `div` x)
-solve (l :/: (Concrete x)) (Concrete y) = l `solve` Concrete (y * x)
-solve ((Concrete x) :/: r) (Concrete y) = r `solve` Concrete (x `div` y)
-solve l@Concrete {} r@SOperation {} = r `solve` l
--- x == C
-solve Unknown (Concrete n) = Just n
-solve (Concrete n) Unknown = Just n
--- X == X
-solve Unknown Unknown = trace "Cannot solve x=x" Nothing
--- a # b == c # d
-solve l r = case (simplify l, simplify r) of
-  (SOperation {}, SOperation {}) -> trace "Two unknowns" Nothing
-  (l', r') -> l' `solve` r'
+-- | Find value that the unknown in the expression on the left needs to take to make the expression
+-- take the value on the right
+($=) :: SymbolicExpression -> Int -> Int
+(l :+: (Concrete x)) $= y = l $= (y - x)
+((Concrete x) :+: r) $= y = r $= (y - x)
+(l :*: (Concrete x)) $= y = l $= (y `div` x)
+((Concrete x) :*: r) $= y = r $= (y `div` x)
+(l :-: (Concrete x)) $= y = l $= (y + x)
+((Concrete x) :-: r) $= y = r $= (x - y)
+(l :/: (Concrete x)) $= y = l $= (y * x)
+((Concrete x) :/: r) $= y = r $= (x `div` y)
+Unknown $= y = y
+SOperation {} $= _ = error "Cannot proceed"
+Concrete {} $= _ = error "No unknowns"
 
 part2 :: ByteString -> Int
 part2 input =
@@ -141,5 +135,8 @@ part2 input =
     & Map.map simplify
     & ( \env ->
           let (SOperation e1 _ e2) = env ! "root"
-           in fromJust (solve e1 e2)
+           in case (simplify e1, simplify e2) of
+                (Concrete y, e) -> e $= y
+                (e, Concrete y) -> e $= y
+                _ -> error "More than one unknown"
       )
