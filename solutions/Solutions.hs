@@ -33,6 +33,9 @@ class DisplaySolution a where
 instance DisplaySolution Int where
   displaySolution = show
 
+instance DisplaySolution Double where
+  displaySolution = show
+
 instance DisplaySolution String where
   displaySolution = id
 
