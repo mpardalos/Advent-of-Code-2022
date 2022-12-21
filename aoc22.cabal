@@ -46,6 +46,7 @@ library
       , Day17
       , Day18
       , Day19
+      , Day20
       , Util
 
 executable aoc22
