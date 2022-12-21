@@ -4,6 +4,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}
 
 module Day21 (part1, part2) where
 
@@ -14,7 +16,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.Function ((&))
 import Data.Functor ((<&>))
-import Data.Map (Map)
+import Data.Map (Map, (!))
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Debug.Trace
@@ -24,12 +26,11 @@ type Name = ByteString
 
 data Operation = Add | Sub | Mul | Div
 
-data Expression n
+data Expression
   = Constant Int
-  | Operation n Operation n
-  deriving (Functor)
+  | Operation Name Operation Name
 
-parseLine :: ByteString -> (Name, Expression Name)
+parseLine :: ByteString -> (Name, Expression)
 parseLine = parseOrError $ do
   exprName <- name
   _ <- P.string ": "
@@ -54,9 +55,9 @@ parseLine = parseOrError $ do
 
 type Env = Map Name
 
-evalExpression :: Expression Int -> Int
-evalExpression (Constant n) = n
-evalExpression (Operation l op r) = evalOp op l r
+evalExpression :: Env Int -> Expression -> Int
+evalExpression _ (Constant n) = n
+evalExpression env (Operation l op r) = evalOp op (env ! l) (env ! r)
 
 evalOp :: Integral a => Operation -> a -> a -> a
 evalOp Add = (+)
@@ -64,10 +65,10 @@ evalOp Sub = (-)
 evalOp Mul = (*)
 evalOp Div = div
 
-evalExpressions :: [(Name, Expression Name)] -> Env Int
+evalExpressions :: [(Name, Expression)] -> Env Int
 evalExpressions expressionList =
   -- God bless laziness
-  let env = Map.fromList $ map (second (evalExpression . fmap (env Map.!))) expressionList
+  let env = Map.fromList $ map (second (evalExpression env)) expressionList
    in env
 
 part1 :: ByteString -> Int
@@ -75,14 +76,22 @@ part1 input =
   BS.lines input
     & map parseLine
     & evalExpressions
-    & (Map.! "root")
+    & (! "root")
 
 data SymbolicExpression
   = SOperation SymbolicExpression Operation SymbolicExpression
   | Unknown
   | Concrete Int
 
-formSymbolicExpressions :: [(Name, Expression Name)] -> Env SymbolicExpression
+pattern a :+: b = SOperation a Add b
+
+pattern a :*: b = SOperation a Mul b
+
+pattern a :-: b = SOperation a Sub b
+
+pattern a :/: b = SOperation a Div b
+
+formSymbolicExpressions :: [(Name, Expression)] -> Env SymbolicExpression
 formSymbolicExpressions expressionList =
   let env =
         Map.fromList $
@@ -90,7 +99,7 @@ formSymbolicExpressions expressionList =
             ( \case
                 ("humn", _) -> ("humn", Unknown)
                 (name, Constant n) -> (name, Concrete n)
-                (name, Operation l op r) -> (name, SOperation (env Map.! l) op (env Map.! r))
+                (name, Operation l op r) -> (name, SOperation (env ! l) op (env ! r))
             )
             expressionList
    in env
@@ -105,13 +114,14 @@ simplify (SOperation l op r) =
 
 solve :: SymbolicExpression -> SymbolicExpression -> Maybe Int
 -- a # b == C
-solve (SOperation l Add (Concrete x)) (Concrete y) = l `solve` Concrete (y - x)
-solve (SOperation l Sub (Concrete x)) (Concrete y) = l `solve` Concrete (y + x)
-solve (SOperation (Concrete x) Sub r) (Concrete y) = r `solve` Concrete (x - y)
-solve (SOperation l Mul (Concrete x)) (Concrete y) = l `solve` Concrete (y `div` x)
-solve (SOperation l Div (Concrete x)) (Concrete y) = l `solve` Concrete (y * x)
-solve (SOperation (Concrete x) Div r) (Concrete y) = r `solve` Concrete (x `div` y)
-solve (SOperation (Concrete x) op r) (Concrete y) = SOperation r op (Concrete x) `solve` Concrete y
+solve (l :+: (Concrete x)) (Concrete y) = l `solve` Concrete (y - x)
+solve ((Concrete x) :+: r) (Concrete y) = r `solve` Concrete (y - x)
+solve (l :-: (Concrete x)) (Concrete y) = l `solve` Concrete (y + x)
+solve ((Concrete x) :-: r) (Concrete y) = r `solve` Concrete (x - y)
+solve (l :*: (Concrete x)) (Concrete y) = l `solve` Concrete (y `div` x)
+solve ((Concrete x) :*: r) (Concrete y) = r `solve` Concrete (y `div` x)
+solve (l :/: (Concrete x)) (Concrete y) = l `solve` Concrete (y * x)
+solve ((Concrete x) :/: r) (Concrete y) = r `solve` Concrete (x `div` y)
 solve l@Concrete {} r@SOperation {} = r `solve` l
 -- x == C
 solve Unknown (Concrete n) = Just n
@@ -130,6 +140,6 @@ part2 input =
     & formSymbolicExpressions
     & Map.map simplify
     & ( \env ->
-          let (SOperation e1 _ e2) = env Map.! "root"
+          let (SOperation e1 _ e2) = env ! "root"
            in fromJust (solve e1 e2)
       )
