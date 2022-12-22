@@ -7,6 +7,7 @@
 module Day19 (part1, part2) where
 
 import Control.Monad (guard)
+import Control.Parallel.Strategies (parMap, rseq)
 import Data.Attoparsec.ByteString.Char8 qualified as P
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
@@ -142,7 +143,8 @@ part1 :: ByteString -> Int
 part1 input =
   BS.lines input
     & map parseLine
-    & map
+    & parMap
+      rseq
       ( \blueprint ->
           iterate (ordNub . concatMap (step blueprint)) [initialState]
             & (!! 24)
@@ -157,7 +159,8 @@ part2 input =
   BS.lines input
     & map parseLine
     & take 3
-    & map
+    & parMap
+      rseq
       ( \blueprint ->
           iterate (hashNub . concatMap (step blueprint)) [initialState]
             & (!! 32)

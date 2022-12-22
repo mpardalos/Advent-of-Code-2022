@@ -25,6 +25,7 @@ library
       , massiv
       , attoparsec
       , hashable
+      , parallel
     hs-source-dirs: solutions
     exposed-modules:  Solutions
     other-modules:
