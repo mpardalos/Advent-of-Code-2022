@@ -14,6 +14,7 @@ import Data.ByteString.Char8 qualified as BS
 import Data.Function ((&))
 import Data.Hashable
 import GHC.Generics (Generic)
+import Safe (maximumDef)
 import Util
 
 {-
@@ -95,11 +96,12 @@ data RobotType
   | Geode
   deriving (Show)
 
-step :: Blueprint -> State -> [State]
-step Blueprint {..} State {..} = do
+step :: Blueprint -> Int -> State -> [State]
+step Blueprint {..} maxGeodes (State {..}) = do
   guard (obsidianRobots <= geodeRobotObsidianCost)
   guard (clayRobots <= obsidianRobotClayCost)
   guard (oreRobots <= maximum @[] [clayRobotOreCost, obsidianRobotOreCost, geodeRobotOreCost])
+  guard (geodes >= maxGeodes - 1)
 
   robotToMake <-
     if
@@ -139,6 +141,12 @@ step Blueprint {..} State {..} = do
         geodeRobots = geodeRobots + geodeRobotsMade
       }
 
+stepAll :: Blueprint -> [State] -> [State]
+stepAll blueprint states =
+  hashNub $ concatMap (step blueprint maxGeodes) states
+  where
+    maxGeodes = maximumDef 0 $ map geodes states
+
 part1 :: ByteString -> Int
 part1 input =
   BS.lines input
@@ -146,7 +154,7 @@ part1 input =
     & parMap
       rseq
       ( \blueprint ->
-          iterate (hashNub . concatMap (step blueprint)) [initialState]
+          iterate (stepAll blueprint) [initialState]
             & (!! 24)
             & fmap geodes
             & maximum
@@ -162,7 +170,7 @@ part2 input =
     & parMap
       rseq
       ( \blueprint ->
-          iterate (hashNub . concatMap (step blueprint)) [initialState]
+          iterate (stepAll blueprint) [initialState]
             & (!! 32)
             & fmap geodes
             & maximum
