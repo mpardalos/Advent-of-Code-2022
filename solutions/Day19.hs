@@ -146,7 +146,7 @@ part1 input =
     & parMap
       rseq
       ( \blueprint ->
-          iterate (ordNub . concatMap (step blueprint)) [initialState]
+          iterate (hashNub . concatMap (step blueprint)) [initialState]
             & (!! 24)
             & fmap geodes
             & maximum
