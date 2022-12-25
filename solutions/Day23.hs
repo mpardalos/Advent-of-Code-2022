@@ -7,14 +7,13 @@ module Day23 (part1, part2) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
-import Data.List (findIndex, foldl', inits, iterate', unfoldr)
+import Data.List (iterate', unfoldr)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Debug.Trace
-import Safe (headDef, headMay)
+import Safe (headMay)
 import Text.Printf (printf)
 
 type Coordinates = (Int, Int)
@@ -40,18 +39,13 @@ rotate n [a, b, c, d] = rotate (n `mod` 4) [a, b, c, d]
 rotate _ _ = undefined
 {-# INLINE rotate #-}
 
-moves :: Int -> Set Coordinates -> Map Coordinates Coordinates
-moves n grid =
-  foldl'
-    ( \acc (from, to) ->
-        Map.alter
-          ( \case
-              Nothing -> Just from
-              Just _ -> Nothing
-          )
-          to
-          acc
-    )
+-- | Moves that the elves will make for one step of the process. Given as a map of (to_position -> from_position)
+getMoves :: Int -> Set Coordinates -> Map Coordinates Coordinates
+getMoves n grid =
+  foldr
+    -- If the alter finds a Just in the Map, then it means there is another elf
+    -- moving to the same position as this, and we can remove both.
+    (\(from, to) !acc -> Map.alter (\case Nothing -> Just from; Just _ -> Nothing) to acc)
     Map.empty
     proposedMoves
   where
@@ -62,48 +56,27 @@ moves n grid =
           not (dr == 0 && dc == 0)
       ]
 
+    northNeighbours (row, col) = [(row - 1, col + dcol) | dcol <- [-1 .. 1]]
+    southNeighbours (row, col) = [(row + 1, col + dcol) | dcol <- [-1 .. 1]]
+    westNeighbours (row, col) = [(row + drow, col - 1) | drow <- [-1 .. 1]]
+    eastNeighbours (row, col) = [(row + drow, col + 1) | drow <- [-1 .. 1]]
+
+    -- The positions that the elves suggest moving to, not accounting for conflicts with other elves
+    proposedMoves :: [(Coordinates, Coordinates)]
     proposedMoves =
       mapMaybe
         ( \(row, col) ->
             if not $ any (`Set.member` grid) (neighbours (row, col))
               then Nothing
               else
-                fmap ((row, col),)
-                  . headMay
-                  . map snd
-                  . filter fst
-                  . rotate n
-                  $ [ ( not
-                          ( Set.member (row - 1, col - 1) grid
-                              || Set.member (row - 1, col) grid
-                              || Set.member (row - 1, col + 1) grid
-                          ),
-                        (row - 1, col)
-                      ),
-                      ( not
-                          ( Set.member (row + 1, col - 1) grid
-                              || Set.member (row + 1, col) grid
-                              || Set.member (row + 1, col + 1) grid
-                          ),
-                        (row + 1, col)
-                      ),
-                      ( not
-                          ( Set.member (row - 1, col - 1) grid
-                              || Set.member (row, col - 1) grid
-                              || Set.member (row + 1, col - 1) grid
-                          ),
-                        (row, col - 1)
-                      ),
-                      ( not
-                          ( Set.member (row - 1, col + 1) grid
-                              || Set.member (row, col + 1) grid
-                              || Set.member (row + 1, col + 1) grid
-                          ),
-                        (row, col + 1)
-                      )
-                    ]
+                fmap ((row, col),) . headMay . map snd . filter fst . rotate n $
+                  [ (not . any (`Set.member` grid) $ northNeighbours (row, col), (row - 1, col)),
+                    (not . any (`Set.member` grid) $ southNeighbours (row, col), (row + 1, col)),
+                    (not . any (`Set.member` grid) $ westNeighbours (row, col), (row, col - 1)),
+                    (not . any (`Set.member` grid) $ eastNeighbours (row, col), (row, col + 1))
+                  ]
         )
-        $ (Set.toList grid)
+        $ Set.toList grid
 
 applyMoves :: Map Coordinates Coordinates -> Set Coordinates -> Set Coordinates
 applyMoves changes grid = (grid Set.\\ Set.fromList from) `Set.union` Set.fromList to
@@ -118,7 +91,7 @@ iterateIndexed f initX =
     $ (0, initX)
 
 part1 :: ByteString -> Int
-part1 = countEmpty . (!! 10) . iterateIndexed (\i grid -> applyMoves (moves i grid) grid) . readInput
+part1 = countEmpty . (!! 10) . iterateIndexed (\i grid -> applyMoves (getMoves i grid) grid) . readInput
 
 part2 :: ByteString -> Int
 part2 =
@@ -126,10 +99,10 @@ part2 =
     . length
     . unfoldr
       ( \(i, !grid) ->
-          let ms = moves i grid
-           in if null ms
+          let moves = getMoves i grid
+           in if null moves
                 then Nothing
-                else Just ((), (i + 1, applyMoves ms grid))
+                else Just ((), (i + 1, applyMoves moves grid))
       )
     . (0,)
     . readInput
