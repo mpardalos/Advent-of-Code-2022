@@ -28,9 +28,13 @@ readInput =
       ((0, 0), Set.empty)
 
 rotate :: Int -> [a] -> [a]
-rotate 0 (x : xs) = (x : xs)
-rotate n (x : xs) = rotate (n - 1) (xs ++ [x])
-rotate _ [] = []
+rotate 0 [a, b, c, d] = [a, b, c, d]
+rotate 1 [a, b, c, d] = [b, c, d, a]
+rotate 2 [a, b, c, d] = [c, d, a, b]
+rotate 3 [a, b, c, d] = [d, a, b, c]
+rotate n [a, b, c, d] = rotate (n `mod` 4) [a, b, c, d]
+rotate _ _ = undefined
+{-# INLINE rotate #-}
 
 moves :: Int -> Set Coordinates -> [(Coordinates, Coordinates)]
 moves n grid =
