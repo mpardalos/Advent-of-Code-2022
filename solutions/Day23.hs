@@ -5,7 +5,7 @@ module Day23 (part1, part2) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
-import Data.List (findIndex, inits, iterate')
+import Data.List (findIndex, inits, iterate', unfoldr)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -72,10 +72,10 @@ moves n grid =
         )
         $ (Set.toList grid)
 
-step :: Int -> Set Coordinates -> Set Coordinates
-step n grid = (grid Set.\\ Set.fromList remove) `Set.union` Set.fromList add
+applyMoves :: [(Coordinates, Coordinates)] -> Set Coordinates -> Set Coordinates
+applyMoves changes grid = (grid Set.\\ Set.fromList remove) `Set.union` Set.fromList add
   where
-    (remove, add) = unzip (moves n grid)
+    (remove, add) = unzip changes
 
 iterateIndexed :: (Int -> a -> a) -> a -> [a]
 iterateIndexed f initX =
@@ -84,10 +84,22 @@ iterateIndexed f initX =
     $ (0, initX)
 
 part1 :: ByteString -> Int
-part1 = countEmpty . (!! 10) . iterateIndexed step . readInput
+part1 = countEmpty . (!! 10) . iterateIndexed (\i grid -> applyMoves (moves i grid) grid) . readInput
 
 part2 :: ByteString -> Int
-part2 = fromJust . findFirstUnchanged . iterateIndexed step . readInput
+part2 =
+  (+ 1)
+    . length
+    . unfoldr
+      ( \(i, !grid) ->
+          trace ("iter: " ++ show i) $
+            let ms = moves i grid
+             in if null ms
+                  then Nothing
+                  else Just ((), (i + 1, applyMoves ms grid))
+      )
+    . (0,)
+    . readInput
 
 findFirstUnchanged :: [Set Coordinates] -> Maybe Int
 findFirstUnchanged = fmap (+ 1) . findFirstTwoIdentical . zip [0 ..]
