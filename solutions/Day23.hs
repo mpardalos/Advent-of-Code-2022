@@ -6,11 +6,11 @@ module Day23 (part1, part2) where
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
 import Data.List (findIndex, inits, iterate')
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Debug.Trace
-import Safe (headDef)
+import Safe (headDef, headMay)
 import Text.Printf (printf)
 
 type Coordinates = (Int, Int)
@@ -32,15 +32,10 @@ rotate 0 (x : xs) = (x : xs)
 rotate n (x : xs) = rotate (n - 1) (xs ++ [x])
 rotate _ [] = []
 
-step :: Int -> Set Coordinates -> Set Coordinates
--- step n grid | trace ("---\nn=" ++ show n ++ "\n" ++ showGrid grid) False = undefined
-step n grid =
-  Set.map
-    ( \(from, to) ->
-        if Set.size (Set.filter ((to ==) . snd) targets) <= 1
-          then to
-          else from
-    )
+moves :: Int -> Set Coordinates -> [(Coordinates, Coordinates)]
+moves n grid =
+  filter
+    (\(_, to) -> length (filter ((to ==) . snd) targets) <= 1)
     targets
   where
     neighbours (row, col) =
@@ -50,16 +45,14 @@ step n grid =
           not (dr == 0 && dc == 0)
       ]
 
-    -- Add the target coordinates onto each elf
-    targets :: Set (Coordinates, Coordinates)
     targets =
-      Set.map
+      mapMaybe
         ( \(row, col) ->
             if not $ any (`Set.member` grid) (neighbours (row, col))
-              then ((row, col), (row, col))
+              then Nothing
               else
-                ((row, col),)
-                  . headDef (row, col)
+                fmap ((row, col),)
+                  . headMay
                   . map snd
                   . filter fst
                   . rotate n
@@ -77,7 +70,12 @@ step n grid =
                       )
                     ]
         )
-        grid
+        $ (Set.toList grid)
+
+step :: Int -> Set Coordinates -> Set Coordinates
+step n grid = (grid Set.\\ Set.fromList remove) `Set.union` Set.fromList add
+  where
+    (remove, add) = unzip (moves n grid)
 
 iterateIndexed :: (Int -> a -> a) -> a -> [a]
 iterateIndexed f initX =
@@ -94,9 +92,9 @@ part2 = fromJust . findFirstUnchanged . iterateIndexed step . readInput
 findFirstUnchanged :: [Set Coordinates] -> Maybe Int
 findFirstUnchanged = fmap (+ 1) . findFirstTwoIdentical . zip [0 ..]
   where
-    findFirstTwoIdentical ((i, x1) : (_, x2) : xs)
+    findFirstTwoIdentical ((i, x1) : (i2, x2) : xs)
       | x1 == x2 = Just i
-      | otherwise = trace ("recurse " ++ show i) $ findFirstTwoIdentical ((i, x2) : xs)
+      | otherwise = findFirstTwoIdentical ((i2, x2) : xs)
     findFirstTwoIdentical _ = Nothing
 
 showGrid :: Set Coordinates -> String
