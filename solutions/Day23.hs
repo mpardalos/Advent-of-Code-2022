@@ -94,7 +94,7 @@ part2 = fromJust . findFirstUnchanged . iterateIndexed step . readInput
 findFirstUnchanged :: [Set Coordinates] -> Maybe Int
 findFirstUnchanged = fmap (+ 1) . findFirstTwoIdentical . zip [0 ..]
   where
-    findFirstTwoIdentical ((_, x1) : (i, x2) : xs)
+    findFirstTwoIdentical ((i, x1) : (_, x2) : xs)
       | x1 == x2 = Just i
       | otherwise = trace ("recurse " ++ show i) $ findFirstTwoIdentical ((i, x2) : xs)
     findFirstTwoIdentical _ = Nothing
