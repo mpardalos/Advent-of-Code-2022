@@ -1,11 +1,15 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TupleSections #-}
 
 module Day23 (part1, part2) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
+import Data.List (findIndex, inits, iterate')
+import Data.Maybe (fromJust)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Debug.Trace
 import Safe (headDef)
 import Text.Printf (printf)
 
@@ -75,18 +79,25 @@ step n grid =
         )
         grid
 
-iterateStep :: Int -> Set Coordinates -> Set Coordinates
-iterateStep n = go 0
-  where
-    go i grid
-      | i >= n = grid
-      | otherwise = go (i + 1) (step (i `mod` 4) grid)
+iterateIndexed :: (Int -> a -> a) -> a -> [a]
+iterateIndexed f initX =
+  map snd
+    . iterate' (\(i, !x) -> (i + 1, f i x))
+    $ (0, initX)
 
 part1 :: ByteString -> Int
-part1 = countEmpty . iterateStep 10 . readInput
+part1 = countEmpty . (!! 10) . iterateIndexed step . readInput
 
 part2 :: ByteString -> Int
-part2 = const 0
+part2 = fromJust . findFirstUnchanged . iterateIndexed step . readInput
+
+findFirstUnchanged :: [Set Coordinates] -> Maybe Int
+findFirstUnchanged = fmap (+ 1) . findFirstTwoIdentical . zip [0 ..]
+  where
+    findFirstTwoIdentical ((_, x1) : (i, x2) : xs)
+      | x1 == x2 = Just i
+      | otherwise = trace ("recurse " ++ show i) $ findFirstTwoIdentical ((i, x2) : xs)
+    findFirstTwoIdentical _ = Nothing
 
 showGrid :: Set Coordinates -> String
 showGrid grid =
