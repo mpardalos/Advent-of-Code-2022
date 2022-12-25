@@ -1,11 +1,15 @@
 {-# LANGUAGE BangPatterns #-}
+{-# OPTIONS -fprof-auto #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Day23 (part1, part2) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS
-import Data.List (findIndex, inits, iterate', unfoldr)
+import Data.List (findIndex, foldl', inits, iterate', unfoldr)
+import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -36,11 +40,20 @@ rotate n [a, b, c, d] = rotate (n `mod` 4) [a, b, c, d]
 rotate _ _ = undefined
 {-# INLINE rotate #-}
 
-moves :: Int -> Set Coordinates -> [(Coordinates, Coordinates)]
+moves :: Int -> Set Coordinates -> Map Coordinates Coordinates
 moves n grid =
-  filter
-    (\(_, to) -> length (filter ((to ==) . snd) targets) <= 1)
-    targets
+  foldl'
+    ( \acc (from, to) ->
+        Map.alter
+          ( \case
+              Nothing -> Just from
+              Just _ -> Nothing
+          )
+          to
+          acc
+    )
+    Map.empty
+    proposedMoves
   where
     neighbours (row, col) =
       [ (row + dr, col + dc)
@@ -49,7 +62,7 @@ moves n grid =
           not (dr == 0 && dc == 0)
       ]
 
-    targets =
+    proposedMoves =
       mapMaybe
         ( \(row, col) ->
             if not $ any (`Set.member` grid) (neighbours (row, col))
@@ -92,10 +105,11 @@ moves n grid =
         )
         $ (Set.toList grid)
 
-applyMoves :: [(Coordinates, Coordinates)] -> Set Coordinates -> Set Coordinates
-applyMoves changes grid = (grid Set.\\ Set.fromList remove) `Set.union` Set.fromList add
+applyMoves :: Map Coordinates Coordinates -> Set Coordinates -> Set Coordinates
+applyMoves changes grid = (grid Set.\\ Set.fromList from) `Set.union` Set.fromList to
   where
-    (remove, add) = unzip changes
+    to = Map.keys changes
+    from = Map.elems changes
 
 iterateIndexed :: (Int -> a -> a) -> a -> [a]
 iterateIndexed f initX =
@@ -112,22 +126,13 @@ part2 =
     . length
     . unfoldr
       ( \(i, !grid) ->
-          trace ("iter: " ++ show i) $
-            let ms = moves i grid
-             in if null ms
-                  then Nothing
-                  else Just ((), (i + 1, applyMoves ms grid))
+          let ms = moves i grid
+           in if null ms
+                then Nothing
+                else Just ((), (i + 1, applyMoves ms grid))
       )
     . (0,)
     . readInput
-
-findFirstUnchanged :: [Set Coordinates] -> Maybe Int
-findFirstUnchanged = fmap (+ 1) . findFirstTwoIdentical . zip [0 ..]
-  where
-    findFirstTwoIdentical ((i, x1) : (i2, x2) : xs)
-      | x1 == x2 = Just i
-      | otherwise = findFirstTwoIdentical ((i2, x2) : xs)
-    findFirstTwoIdentical _ = Nothing
 
 showGrid :: Set Coordinates -> String
 showGrid grid =
