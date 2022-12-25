@@ -60,16 +60,32 @@ moves n grid =
                   . map snd
                   . filter fst
                   . rotate n
-                  $ [ ( not (Set.member (row - 1, col - 1) grid || Set.member (row - 1, col) grid || Set.member (row - 1, col + 1) grid),
+                  $ [ ( not
+                          ( Set.member (row - 1, col - 1) grid
+                              || Set.member (row - 1, col) grid
+                              || Set.member (row - 1, col + 1) grid
+                          ),
                         (row - 1, col)
                       ),
-                      ( not (Set.member (row + 1, col - 1) grid || Set.member (row + 1, col) grid || Set.member (row + 1, col + 1) grid),
+                      ( not
+                          ( Set.member (row + 1, col - 1) grid
+                              || Set.member (row + 1, col) grid
+                              || Set.member (row + 1, col + 1) grid
+                          ),
                         (row + 1, col)
                       ),
-                      ( not (Set.member (row - 1, col - 1) grid || Set.member (row, col - 1) grid || Set.member (row + 1, col - 1) grid),
+                      ( not
+                          ( Set.member (row - 1, col - 1) grid
+                              || Set.member (row, col - 1) grid
+                              || Set.member (row + 1, col - 1) grid
+                          ),
                         (row, col - 1)
                       ),
-                      ( not (Set.member (row - 1, col + 1) grid || Set.member (row, col + 1) grid || Set.member (row + 1, col + 1) grid),
+                      ( not
+                          ( Set.member (row - 1, col + 1) grid
+                              || Set.member (row, col + 1) grid
+                              || Set.member (row + 1, col + 1) grid
+                          ),
                         (row, col + 1)
                       )
                     ]
